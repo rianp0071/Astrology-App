@@ -1,0 +1,85 @@
+@page "/register"
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@using AstrologyApp.Models
+
+<h3>Register</h3>
+
+<div class="saturn saturn-2"></div>
+<div class="saturn saturn-3"></div>
+
+@if (!string.IsNullOrEmpty(Message))
+{
+    <p style="color:rgb(95, 142, 196)">@Message</p>
+}
+
+<div>
+    <label for="username">Username:</label>
+    <input type="text" id="username" @bind="Username" />
+</div>
+<div>
+    <label for="email">Email:</label>
+    <input type="email" id="email" @bind="Email" />
+</div>
+<div>
+    <label for="password">Password:</label>
+    <input type="password" id="password" @bind="Password" />
+</div>
+<div>
+    <label for="confirmPassword">Confirm Password:</label>
+    <input type="password" id="confirmPassword" @bind="ConfirmPassword" />
+</div>
+<div>
+    <button @onclick="RegisterUser">Register</button>
+    <button @onclick="RedirectToLogin">Back to Login</button>
+</div>
+
+@code {
+    private string Username = string.Empty;
+    private string Email = string.Empty;
+    private string Password = string.Empty;
+    private string ConfirmPassword = string.Empty;
+    private string Message = string.Empty;
+
+    private async Task RegisterUser()
+    {
+        if (Password != ConfirmPassword)
+        {
+            Message = "Passwords do not match.";
+            return;
+        }
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("http://localhost:5042/register", new { Email, Password });
+
+            if (response.IsSuccessStatusCode)
+            {
+                Message = "Registration successful!";
+                Navigation.NavigateTo("/login");
+            }
+            else
+            {
+                var errorResponse = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+                if (errorResponse != null && errorResponse.Errors != null)
+                {
+                    // Extract and join the error messages into a single string.
+                    Message = string.Join(", ", errorResponse.Errors.SelectMany(e => e.Value));
+                }
+                else
+                {
+                    Message = "Registration failed. Please try again.";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Message = $"Error: {ex.Message}";
+        }
+    }
+
+    private void RedirectToLogin()
+    {
+        Navigation.NavigateTo("/login");
+    }
+}

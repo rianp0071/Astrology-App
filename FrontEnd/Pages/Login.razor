@@ -1,0 +1,67 @@
+@page "/login"
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject TokenStorageService TokenStorage
+
+<h3>Login</h3>
+
+<div class="saturn saturn-1"></div>
+<div class="saturn saturn-2"></div>
+<div class="saturn saturn-3"></div>
+
+@if (!string.IsNullOrEmpty(Message))
+{
+    <p style="color:rgb(95, 142, 196)">@Message</p>
+}
+
+<div>
+    <label for="username">Email:</label>
+    <input type="text" id="Email" @bind="Email" />
+</div>
+<div>
+    <label for="password">Password:</label>
+    <input type="password" id="password" @bind="Password" />
+</div>
+<div>
+    <button @onclick="LoginUser">Login</button>
+</div>
+<div style="margin-top: 10px;">
+    <p>Don't have an account?</p>
+    <button @onclick="RedirectToRegister">Register</button>
+</div>
+
+@code {
+    private string Email = string.Empty;
+    private string Password = string.Empty;
+    private string Message = string.Empty;
+
+    private async Task LoginUser()
+    {
+        try
+        {
+            var response = await Http.PostAsJsonAsync("http://localhost:5042/login", new { Email, Password });
+
+            if (response.IsSuccessStatusCode)
+            {
+                var token = await response.Content.ReadAsStringAsync();
+                TokenStorage.SetToken(token, Email); // Store token in the service
+
+                Message = "Login successful!";
+                Navigation.NavigateTo("/"); // Redirect to home page
+            }
+            else
+            {
+                Message = "Invalid username or password.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Message = $"Error: {ex.Message}";
+        }
+    }
+
+    private void RedirectToRegister()
+    {
+        Navigation.NavigateTo("/register");
+    }
+}

@@ -1,0 +1,127 @@
+@page "/test"
+@inject GeminiService GeminiService
+
+<h3>Learn Your Destiny</h3>
+<p></p>
+
+<div>
+    <!-- Date input -->
+    <h5>Input Your Birthday</h5>
+    <input @bind="birthday" type="date" style="width:300px;" />
+    <button @onclick="DescribeSunSign">Learn About My Sun Sign</button>
+    <button @onclick="DescribeHoroscope">Learn About My Horoscope</button>
+    <button @onclick="DescribeCompatibility">Learn About My Compatibility</button>
+</div>
+
+<!-- Spinner -->
+<div style="display:@(isLoading1 ? "block" : "none"); margin: 20px; text-align: center;">
+    <div class="spinner">
+        <div class="diamond"></div>
+    </div>
+    @* <p>Loading...</p> *@
+</div>
+
+<!-- Response -->
+<p>@sunSignDesc</p>
+
+<div>   
+    <!-- Text input (appears below) -->
+    <h5>Ask Anything</h5>
+    <input @bind="userInput" type="text" placeholder="Write something..." style="width:300px;" />
+    <button @onclick="AskGemini">Ask</button>
+</div>
+
+<!-- Spinner -->
+<div style="display:@(isLoading2 ? "block" : "none"); margin: 20px; text-align: center;">
+    <div class="spinner">
+        <div class="diamond"></div>
+    </div>
+    @* <p>Loading...</p> *@
+</div>
+
+<!-- Response -->
+<p>@responseText</p>
+
+@code {
+    private DateTime birthday = DateTime.Now;
+    private string userInput = string.Empty;
+    private string responseText = string.Empty;
+    private string sunSignDesc = string.Empty;
+    private bool isLoading1 = false;
+    private bool isLoading2 = false;
+
+    private async Task DescribeSunSign()
+    {
+        isLoading1 = true; // Start the spinner
+        sunSignDesc = string.Empty; // Clear previous response
+        try
+        {
+            var birthdayString = birthday.ToString("yyyy-MM-dd");
+            sunSignDesc = await GeminiService.AskGeminiAsync($"Describe my sun sign. This is my birthday: {birthdayString}");
+        }
+        catch (Exception ex)
+        {
+            sunSignDesc = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isLoading1 = false; // Stop the spinner
+        }
+    }
+
+    private async Task DescribeHoroscope()
+    {
+        isLoading1 = true; // Start the spinner
+        sunSignDesc = string.Empty; // Clear previous response
+        try
+        {
+            var birthdayString = birthday.ToString("yyyy-MM-dd");
+            sunSignDesc = await GeminiService.AskGeminiAsync($"Describe my horoscope. This is my birthday: {birthdayString}");
+        }
+        catch (Exception ex)
+        {
+            sunSignDesc = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isLoading1 = false; // Stop the spinner
+        }
+    }
+
+    private async Task DescribeCompatibility()
+    {
+        isLoading1 = true; // Start the spinner
+        sunSignDesc = string.Empty; // Clear previous response
+        try
+        {
+            var birthdayString = birthday.ToString("yyyy-MM-dd");
+            sunSignDesc = await GeminiService.AskGeminiAsync($"Describe my compatibility. This is my birthday: {birthdayString}");
+        }
+        catch (Exception ex)
+        {
+            sunSignDesc = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isLoading1 = false; // Stop the spinner
+        }
+    }
+
+    private async Task AskGemini()
+    {
+        isLoading2 = true; // Start the spinner
+        responseText = string.Empty; // Clear previous response
+        try
+        {
+            responseText = await GeminiService.AskGeminiAsync(userInput);
+        }
+        catch (Exception ex)
+        {
+            responseText = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isLoading2 = false; // Stop the spinner
+        }
+    }
+}
