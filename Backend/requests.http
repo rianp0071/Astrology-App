@@ -21,7 +21,33 @@ Content-Type: application/json
 ###
 
 # Access the unprotected route
+GET http://localhost:5042/users
+
+###
+
+# Access the unprotected route
 GET http://localhost:5042/unprotected
+
+###
+
+# Save Birthday
+POST http://localhost:5042/saveBirthday
+Content-Type: application/json
+
+{
+  "email": "testuser@example.com",
+  "birthday": "1990-11-01T00:00:00"
+}
+
+###
+
+# Get All Birthdays
+GET http://localhost:5042/getAllUsersWithBirthdays
+
+###
+
+# Get User Birthday
+GET http://localhost:5042/getBirthday/testuser@example.com
 
 ###
 
