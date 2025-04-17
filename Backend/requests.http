@@ -1,0 +1,30 @@
+# Register a new user
+POST http://localhost:5042/register
+Content-Type: application/json
+
+{
+  "email": "hi@example.com",
+  "password": "Test123!"
+}
+
+###
+
+# Login with the registered user
+POST http://localhost:5042/login
+Content-Type: application/json
+
+{
+  "email": "hi@example.com",
+  "password": "Test123!"
+}
+
+###
+
+# Access the unprotected route
+GET http://localhost:5042/unprotected
+
+###
+
+# Access the unprotected route
+GET http://localhost:5042/protected
+Bearer: 
