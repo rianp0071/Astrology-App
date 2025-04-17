@@ -1,1 +1,3 @@
 backend
+
+dotnet add packages identity, entityframworkcore, efc in memory, identityapi (something like this)
