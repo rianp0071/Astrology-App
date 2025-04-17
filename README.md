@@ -1,6 +1,6 @@
 # Astrology-App
 
-new packages: identity, in memory db, entity framwork, identityapi
+new packages add to backend: identity, in memory db, entity framwork, identityapi
 
 Front End: dotnet blazorwasm
 
