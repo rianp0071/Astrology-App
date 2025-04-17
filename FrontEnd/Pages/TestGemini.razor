@@ -1,5 +1,7 @@
 @page "/test"
 @inject GeminiService GeminiService
+@inject HttpClient Http
+@inject TokenStorageService TokenStorage
 
 <h3>Learn Your Destiny</h3>
 <p></p>
@@ -8,6 +10,7 @@
     <!-- Date input -->
     <h5>Input Your Birthday</h5>
     <input @bind="birthday" type="date" style="width:300px;" />
+    <button @onclick="SaveBirthday">Save Birthday</button>
     <button @onclick="DescribeSunSign">Learn About My Sun Sign</button>
     <button @onclick="DescribeHoroscope">Learn About My Horoscope</button>
     <button @onclick="DescribeCompatibility">Learn About My Compatibility</button>
@@ -49,6 +52,54 @@
     private string sunSignDesc = string.Empty;
     private bool isLoading1 = false;
     private bool isLoading2 = false;
+
+    private async Task SaveBirthday()
+    {
+        isLoading1 = true; // Start the spinner
+        sunSignDesc = string.Empty;
+        // Validate input
+        if (birthday == default)
+        {
+            Console.WriteLine("Invalid birthday.");
+            sunSignDesc = "Please select a valid birthday.";
+            isLoading1 = false; // Stop the spinner
+            return;
+        }
+
+        try
+        {
+            // Prepare the data to send to the API
+            var getEmail = TokenStorage.GetUserEmail() ?? "example@email.com";
+            var birthdayData = new
+            {
+                Email = getEmail, 
+                Birthday = birthday.ToString("yyyy-MM-ddTHH:mm:ss") // Format the date correctly
+            };
+        
+            // Print the data to the console for debugging
+            Console.WriteLine($"Sending data: {birthdayData.Email}, {birthdayData.Birthday}");
+
+            // Call the API endpoint
+            var response = await Http.PostAsJsonAsync("http://localhost:5042/saveBirthday", birthdayData);
+
+            if (response.IsSuccessStatusCode)
+            {
+                Console.WriteLine("Birthday saved successfully!");
+                sunSignDesc = "Birthday saved successfully!";
+            }
+            else
+            {
+                sunSignDesc = "Failed to save birthday."; 
+                Console.WriteLine($"Failed to save birthday: {response.ReasonPhrase}");
+            }
+            isLoading1 = false; // Stop the spinner
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"An error occurred: {ex.Message}");
+        }
+    }
+
 
     private async Task DescribeSunSign()
     {
