@@ -1,12 +1,13 @@
-﻿@page "/users"
+@page "/users"
 @inject HttpClient Http
 @inject TokenStorageService TokenStorage
 @inject NavigationManager Navigation
 
-<h3>Other Registered Users</h3>
-<p>Based off your sun sign: @sunSignBasedOnBirthday</p>
+<h3>Top 10 Other Compatible Users</h3>
 
 @* Enhance UI/UX:
+
+// ALSO Implement cCACHING LATER ON FOR BETTER PERFORMANCE!!!!!!!!!!!!!
 
 Add tooltips or a legend explaining what "Compatible" or "Not Compatible" means.
 
@@ -25,37 +26,40 @@ If the number of users grows, you can implement pagination or a search box to ma
     <p>You are not authorized to view this page.</p>
     <button @onclick="NavigateToLogin">Go to Login</button>
 }
-else if (userBirthdays == null)
+else if (userBirths == null)
 {
     <p>Loading birthdays...</p>
 }
-else if (!userBirthdays.Any())
-{
-    <p>No users with birthdays found.</p>
-}
-else if (@sunSignBasedOnBirthday == string.Empty)
+else if (@currentUserBirth == null)
 {
     <p>Go to Home to Save Your Birthday...</p>
 }
+else if (!userBirths.Any())
+{
+    <p>No users with birthdays found.</p>
+}
 else
 {
+    <p>Based Off Your Given Sun Sign: @currentUserBirth.SunSign, Moon Sign: @currentUserBirth.MoonSign, and Rising Sign: @currentUserBirth.RisingSign</p>
     <table class="table">
         <thead>
             <tr>
                 <th>Email</th>
-                <th>Birthday</th>
                 <th>Sun Sign</th>
+                <th>Moon Sign</th>
+                <th>Rising Sign</th>
                 <th>Compatibility</th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var user in userBirthdays)
+            @foreach (var user in userBirths)
             {
                 <tr>
                     <td>@user.Email</td>
-                    <td>@user.Birthday.ToString("MM/dd/yyyy")</td>
-                    <td>@GetSunSign(user.Birthday)</td>
-                    <td>@(IsCompatible(sunSignBasedOnBirthday, GetSunSign(user.Birthday)) ? "Compatible" : "Not Compatible")</td>
+                    <td>@user.SunSign</td>
+                    <td>@user.MoonSign</td>
+                    <td>@user.RisingSign</td>
+                    <td style="color:@GetCompatibilityColor(user.CompatibilityScore)">@user.CompatibilityScore%</td>
                 </tr>
             }
         </tbody>
@@ -64,9 +68,8 @@ else
 
 
 @code {
-    private List<UserBirthday>? userBirthdays;
-    private string sunSignBasedOnBirthday = string.Empty;
-
+    private List<UserBirth>? userBirths;
+    private UserBirth? currentUserBirth;
     protected override async Task OnInitializedAsync()
     {
         if (TokenStorage.GetToken() == null)
@@ -80,104 +83,66 @@ else
             var currentUserEmail = TokenStorage.GetUserEmail();
 
             // Call the get user birthday endpoint to retrieve the current user's birthday
-            var currentUserBirthday = await Http.GetFromJsonAsync<UserBirthday>(
+            currentUserBirth = await Http.GetFromJsonAsync<UserBirth>(
                 $"http://localhost:5042/getBirthday/{currentUserEmail}");
 
-            // Calculate the current user's sun sign using GetSunSign
-            if (currentUserBirthday?.Birthday != default && currentUserBirthday?.Birthday != null)
+            // Error handling for null currentUserBirth
+            if (currentUserBirth == null)
             {
-                sunSignBasedOnBirthday = GetSunSign(currentUserBirthday.Birthday);
-            }
-            else
-            {
-                Console.WriteLine("Your birthday is not saved.");
+                Console.WriteLine("Current user birthday is null.");
+                userBirths = new List<UserBirth>(); // Handle gracefully if the request fails
+                return;
             }
 
-            // Fetch the list of other users with their birthdays from the API endpoint
-            userBirthdays = await Http.GetFromJsonAsync<List<UserBirthday>>("http://localhost:5042/getAllUsersWithBirthdays");
+            // Fetch the top 10 compatibility results from the API
+            var topCompatibleUsers = await Http.GetFromJsonAsync<List<UserBirth>>(
+                $"http://localhost:5042/getTop10CompatibilityWithOtherUsers/{currentUserEmail}");
 
-            // Exclude the current user's email
-            userBirthdays = userBirthdays?.Where(user => user.Email != currentUserEmail).ToList();
-
-            // Handle empty list if needed
-            if (userBirthdays == null || !userBirthdays.Any())
+            // Handle null or empty list gracefully
+            if (topCompatibleUsers == null || !topCompatibleUsers.Any())
             {
-                Console.WriteLine("No users with birthdays found.");
+                Console.WriteLine("No compatible users found.");
+                userBirths = new List<UserBirth>();
+                return;
             }
+
+            Console.WriteLine($"Top compatible users count: {topCompatibleUsers.Count}");
+
+            // Populate the userBirths list with the compatibility results
+            userBirths = topCompatibleUsers;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error fetching data: {ex.Message}");
-            userBirthdays = new List<UserBirthday>(); // Handle gracefully if the request fails
+            Console.WriteLine($"Error fetching compatibility data: {ex.Message}");
+            userBirths = new List<UserBirth>(); // Handle gracefully if the request fails
         }
     }
+
 
     private void NavigateToLogin()
     {
         Navigation.NavigateTo("/login"); // Redirects the user to a login page
     }
 
-    public class UserBirthday
+    private string GetCompatibilityColor(int compatibility)
+    {
+        return compatibility switch
+        {
+            > 80 => "green",
+            >= 50 => "yellow",
+            _ => "red"
+        };
+    }
+
+    public class UserBirth
     {
         public required string Email { get; set; }
         public DateTime Birthday { get; set; }
+        public string location { get; set; } = string.Empty;
+        public string SunSign { get; set; } = string.Empty;
+        public string MoonSign { get; set; } = string.Empty;
+        public string RisingSign { get; set; } = string.Empty;
+        public int CompatibilityScore { get; set; } = -1;
     }
 
-    // Method to calculate sun sign based on birthday
-    private string GetSunSign(DateTime birthday)
-    {
-        int month = birthday.Month;
-        int day = birthday.Day;
-
-        return month switch
-        {
-            1 when day <= 19 => "Capricorn",
-            1 => "Aquarius",
-            2 when day <= 18 => "Aquarius",
-            2 => "Pisces",
-            3 when day <= 20 => "Pisces",
-            3 => "Aries",
-            4 when day <= 19 => "Aries",
-            4 => "Taurus",
-            5 when day <= 20 => "Taurus",
-            5 => "Gemini",
-            6 when day <= 20 => "Gemini",
-            6 => "Cancer",
-            7 when day <= 22 => "Cancer",
-            7 => "Leo",
-            8 when day <= 22 => "Leo",
-            8 => "Virgo",
-            9 when day <= 22 => "Virgo",
-            9 => "Libra",
-            10 when day <= 22 => "Libra",
-            10 => "Scorpio",
-            11 when day <= 21 => "Scorpio",
-            11 => "Sagittarius",
-            12 when day <= 21 => "Sagittarius",
-            12 => "Capricorn",
-            _ => "Unknown"
-        };
-    }
-
-    private bool IsCompatible(string yourSunSign, string otherSunSign)
-    {
-        var compatibilityMap = new Dictionary<string, List<string>>
-        {
-            { "Aries", new List<string> { "Aries", "Leo", "Sagittarius", "Aquarius", "Gemini" } },
-            { "Taurus", new List<string> { "Taurus", "Virgo", "Capricorn", "Pisces", "Cancer" } },
-            { "Gemini", new List<string> { "Gemini", "Libra", "Aquarius", "Aries", "Leo" } },
-            { "Cancer", new List<string> { "Cancer", "Pisces", "Scorpio", "Taurus", "Virgo" } },
-            { "Leo", new List<string> { "Leo", "Aries", "Sagittarius", "Gemini", "Libra" } },
-            { "Virgo", new List<string> { "Virgo", "Taurus", "Capricorn", "Cancer", "Scorpio" } },
-            { "Libra", new List<string> { "Libra", "Gemini", "Aquarius", "Leo", "Sagittarius" } },
-            { "Scorpio", new List<string> { "Scorpio", "Cancer", "Pisces", "Virgo", "Capricorn" } },
-            { "Sagittarius", new List<string> { "Sagittarius", "Aries", "Leo", "Libra", "Aquarius" } },
-            { "Capricorn", new List<string> { "Capricorn", "Taurus", "Virgo", "Scorpio", "Pisces" } },
-            { "Aquarius", new List<string> { "Aquarius", "Gemini", "Libra", "Aries", "Sagittarius" } },
-            { "Pisces", new List<string> { "Pisces", "Cancer", "Scorpio", "Taurus", "Capricorn" } }
-        };
-
-        return compatibilityMap.TryGetValue(yourSunSign, out var compatibleSigns) &&
-            compatibleSigns.Contains(otherSunSign);
-    }
 }
