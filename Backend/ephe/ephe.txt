@@ -1,1 +1,3 @@
 astrology calc libraries
+
+add EphemerisPath: path in appsettings.json
