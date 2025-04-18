@@ -26,6 +26,7 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddSingleton<BirthdayService>();
+builder.Services.AddScoped<AstrologyCalculator>();
 
 var app = builder.Build();
 
@@ -63,10 +64,20 @@ app.MapPost("/saveBirthday", (BirthdayService birthdayService, BirthdayRequest r
             return Results.BadRequest("Invalid birthday.");
         }
 
-        // Save the birthday
-        birthdayService.SaveBirthday(request.Email, request.Birthday);
+        if (request.BirthTime == default)
+        {
+            return Results.BadRequest("Invalid birth time.");
+        }
 
-        return Results.Ok("Birthday saved successfully!");
+        if (string.IsNullOrWhiteSpace(request.BirthLocation))
+        {
+            return Results.BadRequest("Birth location cannot be empty.");
+        }
+
+        // Save the birthday and additional information
+        birthdayService.SaveBirthday(request.Email, request.Birthday, request.BirthTime, request.BirthLocation);
+
+        return Results.Ok("Birthday data saved successfully!");
     }
     catch (Exception ex)
     {
@@ -77,6 +88,7 @@ app.MapPost("/saveBirthday", (BirthdayService birthdayService, BirthdayRequest r
         return Results.Problem("An error occurred while saving the birthday. Please try again later.");
     }
 });
+
 
 app.MapGet("/getAllUsersWithBirthdays", (BirthdayService birthdayService) =>
 {
@@ -90,17 +102,28 @@ app.MapGet("/getAllUsersWithBirthdays", (BirthdayService birthdayService) =>
     var response = usersWithBirthdays.Select(user => new
     {
         Email = user.Email,
-        Birthday = user.Birthday
+        Birthday = user.Record.Birthday,
+        BirthTime = user.Record.BirthTime,
+        BirthLocation = user.Record.BirthLocation,
+        SunSign = user.Record.SunSign,
+        MoonSign = user.Record.MoonSign,
+        RisingSign = user.Record.RisingSign
     });
+
 
     return Results.Ok(response);
 });
 
 app.MapGet("/getBirthday/{email}", (BirthdayService birthdayService, string email) =>
 {
-    var birthday = birthdayService.GetBirthday(email);
+    var birthdayRecord = birthdayService.GetBirthdayRecord(email);
 
-    if (birthday == null)
+    if (birthdayRecord == null)
+    {
+        return Results.NotFound($"No birthday record found for email: {email}");
+    }
+
+    if (birthdayRecord.Birthday == default)
     {
         return Results.NotFound($"No birthday found for email: {email}");
     }
@@ -108,7 +131,12 @@ app.MapGet("/getBirthday/{email}", (BirthdayService birthdayService, string emai
     return Results.Ok(new
     {
         Email = email,
-        Birthday = birthday
+        Birthday = birthdayRecord.Birthday,
+        BirthTime = birthdayRecord.BirthTime,   
+        BirthLocation = birthdayRecord.BirthLocation,
+        SunSign = birthdayRecord.SunSign,
+        MoonSign = birthdayRecord.MoonSign,
+        RisingSign = birthdayRecord.RisingSign
     });
 });
 
@@ -119,4 +147,9 @@ public class BirthdayRequest
 {
     public required string Email { get; set; }
     public DateTime Birthday { get; set; }
+    public TimeSpan BirthTime { get; set; }
+    public string BirthLocation { get; set; } = string.Empty;
+    public string SunSign { get; set; } = string.Empty; // Added Sun sign
+    public string MoonSign { get; set; } = string.Empty; // Added Moon sign
+    public string RisingSign { get; set; } = string.Empty; // Added Rising sign
 }
