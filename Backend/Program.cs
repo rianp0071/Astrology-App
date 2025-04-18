@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
+// Implement cCACHING LATER ON FOR BETTER PERFORMANCE!!!!!!!!!!!!!
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Define the custom ApplicationDbContext for Identity
@@ -101,13 +103,13 @@ app.MapGet("/getAllUsersWithBirthdays", (BirthdayService birthdayService) =>
 
     var response = usersWithBirthdays.Select(user => new
     {
-        Email = user.Email,
-        Birthday = user.Record.Birthday,
-        BirthTime = user.Record.BirthTime,
-        BirthLocation = user.Record.BirthLocation,
-        SunSign = user.Record.SunSign,
-        MoonSign = user.Record.MoonSign,
-        RisingSign = user.Record.RisingSign
+        user.Email,
+        user.Record.Birthday,
+        user.Record.BirthTime,
+        user.Record.BirthLocation,
+        user.Record.SunSign,
+        user.Record.MoonSign,
+        user.Record.RisingSign
     });
 
 
@@ -131,15 +133,91 @@ app.MapGet("/getBirthday/{email}", (BirthdayService birthdayService, string emai
     return Results.Ok(new
     {
         Email = email,
-        Birthday = birthdayRecord.Birthday,
-        BirthTime = birthdayRecord.BirthTime,   
-        BirthLocation = birthdayRecord.BirthLocation,
-        SunSign = birthdayRecord.SunSign,
-        MoonSign = birthdayRecord.MoonSign,
-        RisingSign = birthdayRecord.RisingSign
+        birthdayRecord.Birthday,
+        birthdayRecord.BirthTime,
+        birthdayRecord.BirthLocation,
+        birthdayRecord.SunSign,
+        birthdayRecord.MoonSign,
+        birthdayRecord.RisingSign
     });
 });
 
+// WHEN SWITCHING TO A DATABASE, USE INDEXING FOR BETTER PERFORMANCE!!!!!!!!!!!!
+app.MapGet("/getTop10CompatibilityWithOtherUsers/{email}", (BirthdayService birthdayService, string email) =>
+{
+    // Get the current user's birthday record
+    var currentUser = birthdayService.GetBirthdayRecord(email);
+
+    if (currentUser == null)
+    {
+        return Results.NotFound($"No birthday record found for email: {email}");
+    }
+
+    // Get all other users' records
+    var allUsers = birthdayService.GetAllBirthdays()
+        .Where(user => user.Email != email); // Exclude the current user
+
+    if (!allUsers.Any())
+    {
+        return Results.NotFound("No other users found.");
+    }
+
+    // PriorityQueue to maintain top 10 compatible users
+    var priorityQueue = new PriorityQueue<(string Email, BirthdayRecord Record, int CompatibilityScore), int>();
+    var lockObject = new object(); // Lock object for thread safety
+
+    // Parallel Processing to calculate compatibility scores
+    Parallel.ForEach(allUsers, user =>
+    {
+        var otherRecord = user.Record;
+
+        // Calculate compatibility score
+        var compatibilityScore = new AstrologyCalculator(new ConfigurationBuilder().Build())
+            .CalculateCompatibilityScore(
+                currentUser.SunSign, currentUser.MoonSign, currentUser.RisingSign,
+                otherRecord.SunSign, otherRecord.MoonSign, otherRecord.RisingSign
+            );
+
+        // Thread-safe operations with PriorityQueue
+        lock (lockObject)
+        {
+            if (priorityQueue.Count < 10)
+            {
+                priorityQueue.Enqueue((user.Email, otherRecord, compatibilityScore), compatibilityScore);
+            }
+            else if (compatibilityScore > priorityQueue.Peek().CompatibilityScore)
+            {
+                priorityQueue.Dequeue(); // Remove the smallest
+                priorityQueue.Enqueue((user.Email, otherRecord, compatibilityScore), compatibilityScore);
+            }
+        }
+    });
+
+    // Extract top 10 users from the priority queue
+    var top10Users = new List<(string Email, BirthdayRecord Record, int CompatibilityScore)>();
+    while (priorityQueue.Count > 0)
+    {
+        top10Users.Add(priorityQueue.Dequeue());
+    }
+
+    // Sort the results in descending order by compatibility score
+    top10Users = top10Users.OrderByDescending(u => u.CompatibilityScore).ToList();
+
+    // Format the response
+    var response = top10Users.Select(user => new
+    {
+        user.Email,
+        user.Record.Birthday,
+        user.Record.BirthTime,
+        user.Record.BirthLocation,
+        user.Record.SunSign,
+        user.Record.MoonSign,
+        user.Record.RisingSign,
+        user.CompatibilityScore
+    });
+
+    return Results.Ok(response);
+});
 
 app.Run();
 
@@ -153,3 +231,5 @@ public class BirthdayRequest
     public string MoonSign { get; set; } = string.Empty; // Added Moon sign
     public string RisingSign { get; set; } = string.Empty; // Added Rising sign
 }
+
+
