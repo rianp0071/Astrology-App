@@ -1,1 +1,3 @@
 blazorwasm
+
+add gemini api endpoint and api key in appsettings.json
