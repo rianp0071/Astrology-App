@@ -121,4 +121,52 @@ public class AstrologyCalculator
         // Replace with geocoding API logic
         return -122.4194; // Example: San Francisco
     }
+
+    private bool IsCompatible(string yourSunSign, string otherSunSign)
+    {
+        var compatibilityMap = new Dictionary<string, List<string>>
+        {
+            { "Aries", new List<string> { "Aries", "Leo", "Sagittarius", "Aquarius", "Gemini" } },
+            { "Taurus", new List<string> { "Taurus", "Virgo", "Capricorn", "Pisces", "Cancer" } },
+            { "Gemini", new List<string> { "Gemini", "Libra", "Aquarius", "Aries", "Leo" } },
+            { "Cancer", new List<string> { "Cancer", "Pisces", "Scorpio", "Taurus", "Virgo" } },
+            { "Leo", new List<string> { "Leo", "Aries", "Sagittarius", "Gemini", "Libra" } },
+            { "Virgo", new List<string> { "Virgo", "Taurus", "Capricorn", "Cancer", "Scorpio" } },
+            { "Libra", new List<string> { "Libra", "Gemini", "Aquarius", "Leo", "Sagittarius" } },
+            { "Scorpio", new List<string> { "Scorpio", "Cancer", "Pisces", "Virgo", "Capricorn" } },
+            { "Sagittarius", new List<string> { "Sagittarius", "Aries", "Leo", "Libra", "Aquarius" } },
+            { "Capricorn", new List<string> { "Capricorn", "Taurus", "Virgo", "Scorpio", "Pisces" } },
+            { "Aquarius", new List<string> { "Aquarius", "Gemini", "Libra", "Aries", "Sagittarius" } },
+            { "Pisces", new List<string> { "Pisces", "Cancer", "Scorpio", "Taurus", "Capricorn" } }
+        };
+
+        return compatibilityMap.TryGetValue(yourSunSign, out var compatibleSigns) &&
+            compatibleSigns.Contains(otherSunSign);
+    }
+
+    public int CalculateCompatibilityScore(
+    string yourSunSign, string yourMoonSign, string yourRisingSign,
+    string otherSunSign, string otherMoonSign, string otherRisingSign)
+    {
+        // Define weights
+        const int sunWeight = 45;
+        const int moonWeight = 35;
+        const int risingWeight = 20;
+
+        // Calculate individual compatibility scores (1 if compatible, 0 if not)
+        int sunScore = IsCompatible(yourSunSign, otherSunSign) ? sunWeight : 0;
+        int moonScore = IsCompatible(yourMoonSign, otherMoonSign) ? moonWeight : 0;
+        int risingScore = IsCompatible(yourRisingSign, otherRisingSign) ? risingWeight : 0;
+
+        // Combine the scores for a total out of 100
+        int totalScore = sunScore + moonScore + risingScore;
+
+        // Console.WriteLine($"Sun Compatibility: {sunScore}/{sunWeight}");
+        // Console.WriteLine($"Moon Compatibility: {moonScore}/{moonWeight}");
+        // Console.WriteLine($"Rising Compatibility: {risingScore}/{risingWeight}");
+        // Console.WriteLine($"Total Compatibility Score: {totalScore}/100");
+
+        return totalScore; // Return the final score
+    }
+
 }
