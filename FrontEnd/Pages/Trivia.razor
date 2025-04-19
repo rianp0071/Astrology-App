@@ -1,0 +1,285 @@
+@page "/trivia"
+@inject HttpClient Http
+
+<h1>Astrology Trivia</h1>
+<p>Test your knowledge of astrology with our trivia questions!</p>
+
+<div>
+    @if (currentQuestion != null)
+    {
+        <h3>@currentQuestion.QuestionText</h3>
+        <p>Select the correct answer:</p>
+        <ul>
+            @foreach (var option in currentQuestion.AnswerOptions)
+            {
+                <li style="background-color:@backgroundColor;">
+                    <button @onclick="() => SubmitAnswer(option)" style="width: 300px;">@option</button>
+                </li>
+            }
+        </ul>
+
+        @if (!string.IsNullOrWhiteSpace(feedbackMessage))
+        {
+            <p>@feedbackMessage</p>
+        }
+
+        <div>
+            @if (showNextButton)
+            {
+                <button @onclick="NextQuestion" style="width: 150px;">Next</button>
+            }
+            else if (showTryAgainButton)
+            {
+                <button @onclick="TryAgain" style="width: 150px;">Try Again</button>
+            }
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(feedbackMessage))
+    {
+        <p>@feedbackMessage</p>
+    }
+    else
+    {
+        <p>Loading trivia...</p>
+    }
+</div>
+
+
+@code {
+    private List<TriviaQuestion> questions = new List<TriviaQuestion>();
+    private TriviaQuestion? currentQuestion;
+    private string? selectedAnswer;
+    private string feedbackMessage = string.Empty;
+    private bool showNextButton = false;
+    private bool showTryAgainButton = false;
+    private string backgroundColor = "white";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.Delay(100); // Simulate loading delay
+        questions = GenerateQuestions(); // Ensure this populates the list
+        RandomizeQuestions(); // Shuffle questions if needed
+        LoadQuestion(); // Load the first question
+    }
+
+    private void LoadQuestion()
+    {
+        // Load the next question
+        currentQuestion = questions.FirstOrDefault();
+        feedbackMessage = string.Empty;
+        showNextButton = false;
+        showTryAgainButton = false;
+    }
+
+    private void RandomizeQuestions()
+    {
+        var random = new Random();
+        questions = questions.OrderBy(_ => random.Next()).ToList();
+    }
+
+    private void SubmitAnswer(string answer)
+    {
+        selectedAnswer = answer;
+
+        if (answer == currentQuestion?.CorrectAnswer)
+        {
+            feedbackMessage = $"Correct! {currentQuestion.Explanation}";
+            showNextButton = true;
+        }
+        else
+        {
+            feedbackMessage = "Incorrect. Please try again.";
+            showTryAgainButton = true;
+        }
+        backgroundColor = GetBackgroundColor(answer);
+    }
+
+    private void NextQuestion()
+    {
+        // Remove the current question from the list
+        questions.Remove(currentQuestion!);
+
+        // Load the next question
+        if (questions.Any())
+        {
+            LoadQuestion();
+        }
+        else
+        {
+            feedbackMessage = "You've completed all trivia questions! Well done!";
+            currentQuestion = null;
+        }
+        backgroundColor = "white";
+    }
+
+    private void TryAgain()
+    {
+        feedbackMessage = string.Empty;
+        showTryAgainButton = false;
+    }
+
+    private string GetBackgroundColor(string option)
+    {
+        if (selectedAnswer == null) return "white";
+        return option == currentQuestion?.CorrectAnswer
+            ? "lightgreen"
+            : option == selectedAnswer
+                ? "lightcoral"
+                : "white";
+    }
+
+    private List<TriviaQuestion> GenerateQuestions()
+    {
+        // Sample trivia questions
+        return new List<TriviaQuestion>
+        {
+            new TriviaQuestion
+            {
+                QuestionText = "Which Sun sign is known for its leadership qualities?",
+                AnswerOptions = new List<string> { "Leo", "Cancer", "Virgo", "Gemini" },
+                CorrectAnswer = "Leo",
+                Explanation = "Leos are known for their natural charisma and leadership abilities."
+            },
+            new TriviaQuestion
+            {
+                QuestionText = "Which Moon sign is known for its emotional depth?",
+                AnswerOptions = new List<string> { "Aquarius", "Pisces", "Capricorn", "Sagittarius" },
+                CorrectAnswer = "Pisces",
+                Explanation = "Pisces Moon is associated with deep emotional sensitivity and intuition."
+            },
+            new TriviaQuestion
+            {
+                QuestionText = "Which Rising sign is the most outgoing and social?",
+                AnswerOptions = new List<string> { "Taurus", "Libra", "Aries", "Scorpio" },
+                CorrectAnswer = "Libra",
+                Explanation = "Libra Rising individuals are known for their charm and ability to connect socially."
+            },
+            new TriviaQuestion
+            {
+                QuestionText = "Which Sun sign is known for its practical and detail-oriented nature?",
+                AnswerOptions = new List<string> { "Virgo", "Aquarius", "Leo", "Sagittarius" },
+                CorrectAnswer = "Virgo",
+                Explanation = "Virgos are known for their meticulous approach and attention to detail."
+            },
+            new TriviaQuestion
+            {
+                QuestionText = "Which Moon sign tends to express emotions through creative outlets?",
+                AnswerOptions = new List<string> { "Taurus", "Libra", "Pisces", "Aries" },
+                CorrectAnswer = "Pisces",
+                Explanation = "Pisces Moons often channel their emotional depth into artistic expression."
+            },
+            new TriviaQuestion
+            {
+                QuestionText = "Which Rising sign is known for being bold and adventurous?",
+                AnswerOptions = new List<string> { "Gemini", "Cancer", "Aries", "Capricorn" },
+                CorrectAnswer = "Aries",
+                Explanation = "Aries Rising individuals tend to be courageous and love taking risks."
+            },
+            new TriviaQuestion
+            {
+                QuestionText = "Which Sun sign is associated with being diplomatic and balanced?",
+                AnswerOptions = new List<string> { "Libra", "Virgo", "Leo", "Scorpio" },
+                CorrectAnswer = "Libra",
+                Explanation = "Libras are known for their ability to mediate and seek harmony in relationships."
+            },
+            new TriviaQuestion
+            {
+                QuestionText = "Which Moon sign is often known for its emotional resilience and independence?",
+                AnswerOptions = new List<string> { "Leo", "Aquarius", "Scorpio", "Gemini" },
+                CorrectAnswer = "Aquarius",
+                Explanation = "Aquarius Moons have a unique ability to detach and approach emotions objectively."
+            },
+            new TriviaQuestion
+            {
+                QuestionText = "Which Rising sign is often perceived as mysterious and intense?",
+                AnswerOptions = new List<string> { "Libra", "Sagittarius", "Scorpio", "Pisces" },
+                CorrectAnswer = "Scorpio",
+                Explanation = "Scorpio Rising individuals exude a magnetic and enigmatic presence."
+            },
+            new TriviaQuestion
+            {
+                QuestionText = "Which Sun sign is associated with a love for adventure and exploration?",
+                AnswerOptions = new List<string> { "Sagittarius", "Cancer", "Capricorn", "Aries" },
+                CorrectAnswer = "Sagittarius",
+                Explanation = "Sagittarius individuals are natural explorers with a thirst for knowledge."
+            },
+            new TriviaQuestion
+            {
+                QuestionText = "Which Moon sign tends to prioritize emotional security and comfort?",
+                AnswerOptions = new List<string> { "Cancer", "Taurus", "Virgo", "Aries" },
+                CorrectAnswer = "Cancer",
+                Explanation = "Cancer Moons crave emotional warmth and a nurturing environment."
+            },
+            new TriviaQuestion
+            {
+                QuestionText = "Which Rising sign is known for its sophisticated and ambitious demeanor?",
+                AnswerOptions = new List<string> { "Leo", "Gemini", "Capricorn", "Aquarius" },
+                CorrectAnswer = "Capricorn",
+                Explanation = "Capricorn Rising individuals project an aura of professionalism and ambition."
+            },
+            new TriviaQuestion
+            {
+                QuestionText = "Which Sun sign is associated with deep emotions and loyalty?",
+                AnswerOptions = new List<string> { "Aquarius", "Gemini", "Libra", "Scorpio" },
+                CorrectAnswer = "Scorpio",
+                Explanation = "Scorpios are known for their intense emotional connection and unwavering loyalty."
+            },
+            new TriviaQuestion
+            {
+                QuestionText = "Which Moon sign is recognized for its fun-loving and optimistic nature?",
+                AnswerOptions = new List<string> { "Pisces", "Sagittarius", "Leo", "Cancer" },
+                CorrectAnswer = "Sagittarius",
+                Explanation = "Sagittarius Moons approach life with positivity and enthusiasm."
+            },
+            new TriviaQuestion
+            {
+                QuestionText = "Which Rising sign is known for its intellectual curiosity and adaptability?",
+                AnswerOptions = new List<string> { "Sagittarius", "Gemini", "Virgo", "Aries" },
+                CorrectAnswer = "Gemini",
+                Explanation = "Gemini Rising individuals are inquisitive and excel at adapting to new situations."
+            },
+            new TriviaQuestion
+            {
+                QuestionText = "Which Sun sign is recognized for its creativity and passion?",
+                AnswerOptions = new List<string> { "Virgo", "Leo", "Taurus", "Pisces" },
+                CorrectAnswer = "Leo",
+                Explanation = "Leos often channel their fiery energy into creative pursuits and leadership."
+            },
+            new TriviaQuestion
+            {
+                QuestionText = "Which Moon sign is known for its grounded and dependable nature?",
+                AnswerOptions = new List<string> { "Scorpio", "Libra", "Taurus", "Cancer" },
+                CorrectAnswer = "Taurus",
+                Explanation = "Taurus Moons prioritize stability and create comforting environments."
+            },
+            new TriviaQuestion
+            {
+                QuestionText = "Which Rising sign is associated with being analytical and observant?",
+                AnswerOptions = new List<string> { "Aquarius", "Pisces", "Virgo", "Capricorn" },
+                CorrectAnswer = "Virgo",
+                Explanation = "Virgo Rising individuals excel at assessing situations with clarity and precision."
+            },
+            new TriviaQuestion
+            {
+                QuestionText = "Which Sun sign is often associated with innovation and forward-thinking?",
+                AnswerOptions = new List<string> { "Leo", "Scorpio", "Aquarius", "Sagittarius" },
+                CorrectAnswer = "Aquarius",
+                Explanation = "Aquarians are known for their visionary ideas and desire to make progress."
+            },
+            new TriviaQuestion
+            {
+                QuestionText = "Which Moon sign is associated with intense emotions and transformative experiences?",
+                AnswerOptions = new List<string> { "Taurus", "Pisces", "Leo", "Scorpio" },
+                CorrectAnswer = "Scorpio",
+                Explanation = "Scorpio Moons embrace change and explore emotions deeply and passionately."
+            }
+        };
+    }
+    public class TriviaQuestion
+    {
+        public string QuestionText { get; set; } = string.Empty;
+        public List<string> AnswerOptions { get; set; } = new List<string>();
+        public string CorrectAnswer { get; set; } = string.Empty;
+        public string Explanation { get; set; } = string.Empty;
+    }
+}
