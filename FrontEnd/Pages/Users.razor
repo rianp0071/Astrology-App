@@ -45,9 +45,6 @@ else
         <thead>
             <tr>
                 <th>Email</th>
-                <th>Sun Sign</th>
-                <th>Moon Sign</th>
-                <th>Rising Sign</th>
                 <th>Compatibility</th>
             </tr>
         </thead>
@@ -56,9 +53,6 @@ else
             {
                 <tr>
                     <td>@user.Email</td>
-                    <td>@user.SunSign</td>
-                    <td>@user.MoonSign</td>
-                    <td>@user.RisingSign</td>
                     <td style="color:@GetCompatibilityColor(user.CompatibilityScore)">@user.CompatibilityScore%</td>
                 </tr>
             }
