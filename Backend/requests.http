@@ -36,8 +36,24 @@ Content-Type: application/json
 
 {
   "email": "testuser@example.com",
-  "birthday": "1990-11-01T00:00:00"
+  "birthday": "1990-06-20T00:00:00",
+  "birthTime": "16:30:00",
+  "birthLocation": "New York, USA"
 }
+
+###
+
+# Save Birthday
+POST http://localhost:5042/saveBirthday
+Content-Type: application/json
+
+{
+  "email": "bayneP@example.com",
+  "birthday": "1990-07-20T00:00:00",
+  "birthTime": "18:30:00",
+  "birthLocation": "New York, USA"
+}
+
 
 ###
 
@@ -48,6 +64,31 @@ GET http://localhost:5042/getAllUsersWithBirthdays
 
 # Get User Birthday
 GET http://localhost:5042/getBirthday/testuser@example.com
+
+###
+# Get Compatibility With Other Users
+GET http://localhost:5042/getTop10CompatibilityWithOtherUsers/testuser@example.com
+
+###
+# Get Compatibility With 2 Users
+POST http://localhost:5042/calculateCompatibility
+Content-Type: application/json
+
+{
+  "Person1": {
+    "Name": "John",
+    "Birthday": "1990-05-15",
+    "BirthTime": "12:30:00",
+    "BirthLocation": "New York, USA"
+  },
+  "Person2": {
+    "Name": "Jane",
+    "Birthday": "1992-05-15",
+    "BirthTime": "14:45:00",
+    "BirthLocation": "Los Angeles, USA"
+  }
+}
+
 
 ###
 
