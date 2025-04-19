@@ -1,1 +1,3 @@
 pages
+
+make sure to properly congfig new pages and endpoints in navmenu.html
