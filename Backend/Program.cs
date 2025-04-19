@@ -219,6 +219,55 @@ app.MapGet("/getTop10CompatibilityWithOtherUsers/{email}", (BirthdayService birt
     return Results.Ok(response);
 });
 
+app.MapPost("/calculateCompatibility", (AstrologyCalculator calculator, CompatibilityRequest request) =>
+{
+    try
+    {
+        // Validate input
+        if (request.Person1 == null || request.Person2 == null)
+        {
+            return Results.BadRequest("Both individuals' details must be provided.");
+        }
+
+        // Dynamically calculate Sun sign, Moon sign, and Rising sign for Person 1
+        var person1SunSign = calculator.GetSunSign(request.Person1.Birthday);
+        var person1MoonSign = calculator.GetMoonSign(request.Person1.BirthLocation, request.Person1.Birthday, request.Person1.BirthTime);
+        var person1RisingSign = calculator.GetRisingSign(request.Person1.BirthLocation, request.Person1.Birthday, request.Person1.BirthTime);
+
+        // Dynamically calculate Sun sign, Moon sign, and Rising sign for Person 2
+        var person2SunSign = calculator.GetSunSign(request.Person2.Birthday);
+        var person2MoonSign = calculator.GetMoonSign(request.Person2.BirthLocation, request.Person2.Birthday, request.Person2.BirthTime);
+        var person2RisingSign = calculator.GetRisingSign(request.Person2.BirthLocation, request.Person2.Birthday, request.Person2.BirthTime);
+
+        // Calculate compatibility score
+        var compatibilityScore = calculator.CalculateCompatibilityScore(
+            person1SunSign, person1MoonSign, person1RisingSign,
+            person2SunSign, person2MoonSign, person2RisingSign
+        );
+
+        // Generate compatibility message
+        var compatibilityMessage = compatibilityScore switch
+        {
+            >= 80 => $"Soulmates! You scored {compatibilityScore}%. A perfect match full of harmony!",
+            >= 50 => $"Not bad! You scored {compatibilityScore}%. With a little effort, this could work!",
+            _ => $"Oh no! You scored {compatibilityScore}%. Opposites might attract, but this could be a challenge!"
+        };
+
+        // Return the result
+        return Results.Ok(compatibilityMessage);
+    }
+    catch (Exception ex)
+    {
+        // Log the exception (optional)
+        Console.WriteLine($"An error occurred: {ex.Message}");
+
+        // Return a generic error response
+        return Results.Problem("An error occurred while calculating compatibility. Please try again later.");
+    }
+});
+
+// CompatibilityRequest model
+
 app.Run();
 
 public class BirthdayRequest
@@ -232,4 +281,17 @@ public class BirthdayRequest
     public string RisingSign { get; set; } = string.Empty; // Added Rising sign
 }
 
+// Data models for compatibility request
+public class CompatibilityRequest
+{
+    public PersonDetails Person1 { get; set; } = new PersonDetails();
+    public PersonDetails Person2 { get; set; } = new PersonDetails();
+}
 
+public class PersonDetails
+{
+    public string Name { get; set; } = string.Empty;
+    public DateTime Birthday { get; set; }
+    public TimeSpan BirthTime { get; set; }
+    public string BirthLocation { get; set; } = string.Empty;
+}
