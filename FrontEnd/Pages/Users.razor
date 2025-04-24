@@ -3,7 +3,7 @@
 @inject TokenStorageService TokenStorage
 @inject NavigationManager Navigation
 
-<h3>Top 10 Other Compatible Users</h3>
+@*USE CACHING!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*@
 
 @* Enhance UI/UX:
 
@@ -21,45 +21,48 @@ Pagination or Search Feature:
 
 If the number of users grows, you can implement pagination or a search box to make the table easier to navigate. *@
 
-@if (TokenStorage.GetToken() == null)
-{
-    <p>You are not authorized to view this page.</p>
-    <button @onclick="NavigateToLogin">Go to Login</button>
-}
-else if (userBirths == null)
-{
-    <p>Loading birthdays...</p>
-}
-else if (@currentUserBirth == null)
-{
-    <p>Go to Home to Save Your Birthday...</p>
-}
-else if (!userBirths.Any())
-{
-    <p>No users with birthdays found.</p>
-}
-else
-{
-    <p>Based Off Your Given Sun Sign: @currentUserBirth.SunSign, Moon Sign: @currentUserBirth.MoonSign, and Rising Sign: @currentUserBirth.RisingSign</p>
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Email</th>
-                <th>Compatibility</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var user in userBirths)
-            {
-                <tr>
-                    <td>@user.Email</td>
-                    <td style="color:@GetCompatibilityColor(user.CompatibilityScore)">@user.CompatibilityScore%</td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
+<section style="display: flex; flex-direction: column; gap: 1rem; max-width: 1000px; margin: auto;">
+    <h3>Top 10 Other Compatible Users</h3>
 
+    @if (TokenStorage.GetToken() == null)
+    {
+        <p>You are not authorized to view this page.</p>
+        <button @onclick="NavigateToLogin" style="width: 300px;">Go to Login</button>
+    }
+    else if (userBirths == null)
+    {
+        <p>Loading birthdays...</p>
+    }
+    else if (@currentUserBirth == null)
+    {
+        <p>Go to Home to Save Your Birthday...</p>
+    }
+    else if (!userBirths.Any())
+    {
+        <p>No users with birthdays found.</p>
+    }
+    else
+    {
+        <p>Based Off Your Given Sun Sign: @currentUserBirth.SunSign, Moon Sign: @currentUserBirth.MoonSign, and Rising Sign: @currentUserBirth.RisingSign</p>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Compatibility</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in userBirths)
+                {
+                    <tr>
+                        <td>@user.Email</td>
+                        <td style="color:@GetCompatibilityColor(user.CompatibilityScore)">@user.CompatibilityScore%</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</section>
 
 @code {
     private List<UserBirth>? userBirths;
