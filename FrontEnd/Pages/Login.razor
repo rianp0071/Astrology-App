@@ -3,32 +3,33 @@
 @inject NavigationManager Navigation
 @inject TokenStorageService TokenStorage
 
-<h3>Login</h3>
-
-<div class="saturn saturn-1"></div>
 <div class="saturn saturn-2"></div>
 <div class="saturn saturn-3"></div>
 
-@if (!string.IsNullOrEmpty(Message))
-{
-    <p style="color:rgb(95, 142, 196)">@Message</p>
-}
+<section style="display: flex; flex-direction: column; gap: 1rem; max-width: 300px; margin: auto;">
+    @if (!string.IsNullOrEmpty(Message))
+    {
+        <p>@Message</p>
+    }
+    <h3>Login</h3>
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <label for="username" style="flex: 1;">Email:</label>
+        <input type="text" id="Email" @bind="Email" style="flex: 2;" />
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <label for="password" style="flex: 1;">Password:</label>
+        <input type="password" id="password" @bind="Password" style="flex: 2;" />
+    </div>
+    <div>
+        <button @onclick="LoginUser">Login</button>
+    </div>
+    <div style="margin-top: 10px;">
+        <p>Don't have an account?</p>
+        <button @onclick="RedirectToRegister">Register</button>
+    </div>
+</section>
 
-<div>
-    <label for="username">Email:</label>
-    <input type="text" id="Email" @bind="Email" />
-</div>
-<div>
-    <label for="password">Password:</label>
-    <input type="password" id="password" @bind="Password" />
-</div>
-<div>
-    <button @onclick="LoginUser">Login</button>
-</div>
-<div style="margin-top: 10px;">
-    <p>Don't have an account?</p>
-    <button @onclick="RedirectToRegister">Register</button>
-</div>
+
 
 @code {
     private string Email = string.Empty;
@@ -47,7 +48,7 @@
                 TokenStorage.SetToken(token, Email); // Store token in the service
 
                 Message = "Login successful!";
-                Navigation.NavigateTo("/"); // Redirect to home page
+                Navigation.NavigateTo("/home"); // Redirect to home page
             }
             else
             {
