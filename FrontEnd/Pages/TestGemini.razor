@@ -16,7 +16,13 @@
 
     <!-- Location input -->
     <h5>Input Your Location of Birth</h5>
-    <input @bind="birthLocation" type="text" placeholder="Enter location..." style="width:300px;" />
+    <select @bind="birthLocation" style="width:300px;">
+        <option value="">Select location...</option>
+        @foreach (var location in locations)
+        {
+            <option value="@location">@location</option>
+        }
+    </select>
 
     <!-- Buttons (moved below location field) -->
     <div class="button-container" style="display: flex; flex-direction: column; gap: 1rem; max-width: 300px;">
@@ -45,7 +51,7 @@
 
 <div>
     <!-- Text input (appears below) -->
-    <h5>Ask Anything</h5>
+    <h5>Let's Chat! Express Your Inquisitions</h5>
     <input @bind="userInput" type="text" placeholder="Write something..." style="width:300px;" />
     <button @onclick="AskGemini">Ask</button>
 </div>
@@ -62,6 +68,7 @@
 
 
 @code {
+    private List<string> locations = new() { "New York, USA", "Los Angeles, USA", "Tokyo, Japan", "London, UK", "Paris, France", "Sydney, Australia", "Toronto, Canada" };
     private bool IsAuthenticated => !string.IsNullOrEmpty(TokenStorage.GetToken());
     private DateTime birthday = DateTime.Now;
     private DateTime birthTime = DateTime.Now; // Initialize to current time
@@ -78,13 +85,13 @@
         sunSignDesc = string.Empty;
 
         // Validate input
-        if (birthday == default || string.IsNullOrWhiteSpace(birthLocation))
+        @* if (birthday == default || string.IsNullOrWhiteSpace(birthLocation))
         {
             Console.WriteLine("Invalid birthday or location.");
             sunSignDesc = "Please select a valid birthday and enter a location.";
             isLoading1 = false; // Stop the spinner
             return;
-        }
+        } *@
 
         try
         {
@@ -111,7 +118,7 @@
             }
             else
             {
-                sunSignDesc = "Failed to save birth data.";
+                sunSignDesc = "Failed to save birth data. Check if all fields are filled correctly.";
                 Console.WriteLine($"Failed to save birth data: {response.ReasonPhrase}");
             }
         }
@@ -131,13 +138,14 @@
         sunSignDesc = string.Empty;
         try
         {
+            var descString = await descStringAsync();
             if (string.IsNullOrWhiteSpace(birthLocation))
             {
-                sunSignDesc = await GeminiService.AskGeminiAsync($"Describe my sun sign based on astrology. {descString()}");
+                sunSignDesc = await GeminiService.AskGeminiAsync($"Describe my sun sign based on astrology. {descString}");
             }
             else
             {
-                sunSignDesc = await GeminiService.AskGeminiAsync($"Describe my sun, rising, and moon signs based on astrology. {descString()}");
+                sunSignDesc = await GeminiService.AskGeminiAsync($"Describe my sun, rising, and moon signs based on astrology. {descString}");
             }
         }
         catch (Exception ex)
@@ -156,7 +164,8 @@
         sunSignDesc = string.Empty;
         try
         {
-            sunSignDesc = await GeminiService.AskGeminiAsync($"Describe my horoscope based on astrology. {descString()}");  
+            var descString = await descStringAsync();
+            sunSignDesc = await GeminiService.AskGeminiAsync($"Describe my horoscope based on astrology. {descString}");  
         }
         catch (Exception ex)
         {
@@ -174,7 +183,8 @@
         sunSignDesc = string.Empty;
         try
         {
-            sunSignDesc = await GeminiService.AskGeminiAsync($"Describe my compatibility based on astrology. {descString()}");
+            var descString = await descStringAsync();
+            sunSignDesc = await GeminiService.AskGeminiAsync($"Describe my compatibility based on astrology. {descString}");
         }
         catch (Exception ex)
         {
@@ -204,12 +214,69 @@
         }
     }
 
-    private String descString()
+    @* returns signs in a list: index 0 is sun sign, 1 is moon sign and 2 is rising sign (moon and rising arent included if location not selected) *@
+    private async Task<List<string>> getSignsAsync()
     {
+        // Initialize loading state
+        isLoading1 = true;
+
+        try
+        {
+            // Create the JSON payload
+            var payload = new
+            {
+                Birthday = birthday,
+                BirthTime = birthTime.TimeOfDay, // Extract the time portion only
+                BirthLocation = string.IsNullOrWhiteSpace(birthLocation) ? "" : birthLocation
+            };
+
+            // Send a POST request to the API endpoint
+            var response = await Http.PostAsJsonAsync("http://localhost:5042/getSigns", payload);
+
+            // Check for success
+            if (response.IsSuccessStatusCode)
+            {
+                // Parse the JSON response
+                var result = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+
+                if (result != null)
+                {
+                    // Extract response values
+                    Console.WriteLine("Signs retrieved successfully!");
+                    return result.Values.ToList();
+                }
+            }
+            else
+            {
+                // Handle errors from the API
+                Console.WriteLine($"Failed to retrieve signs. Status Code: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log and display any errors encountered
+            Console.WriteLine($"An error occurred while retrieving signs: {ex.Message}");
+        }
+        finally
+        {
+            // Reset loading state
+            isLoading1 = false;
+        }
+
+        return new List<string>(); // Return an empty list in case of failure
+    }
+
+
+    private async Task<string> descStringAsync()
+    {
+        var signs = await getSignsAsync();
+
         if (string.IsNullOrWhiteSpace(birthLocation))
         {
-            return $"This is my birthday: {birthday.ToString("yyyy-MM-dd")}";
+            return $"This is my birthday: {birthday:yyyy-MM-dd} and sun sign: {signs.ElementAtOrDefault(0)}";
         }
-        return $"This is my birthday: {birthday.ToString("yyyy-MM-dd")}, birth time: {birthTime.ToString("HH:mm:ss")}, and location: {birthLocation}";
+        return $"This is my birthday: {birthday:yyyy-MM-dd}, birth time: {birthTime:HH:mm:ss}, and location: {birthLocation}. " +
+            $"These are my signs: sun sign: {signs.ElementAtOrDefault(0)}, moon sign: {signs.ElementAtOrDefault(1)}, and rising sign: {signs.ElementAtOrDefault(2)}.";
     }
+
 }
