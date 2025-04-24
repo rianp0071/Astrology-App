@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using AstrologyApp.Models;
+
 
 // Implement cCACHING LATER ON FOR BETTER PERFORMANCE!!!!!!!!!!!!!
 
@@ -44,6 +46,12 @@ app.MapGet("/users", async (UserManager<IdentityUser> userManager) =>
         .ToListAsync();
 
     return Results.Ok(emails);
+});
+
+app.MapGet("/users/{email}", async (UserManager<IdentityUser> userManager, string email) =>
+{
+    var userExists = await userManager.FindByEmailAsync(email) != null;
+    return userExists ? Results.Ok() : Results.NotFound();
 });
 
 app.MapGet("/unprotected", () => "This is an unprotected route!");
@@ -266,32 +274,34 @@ app.MapPost("/calculateCompatibility", (AstrologyCalculator calculator, Compatib
     }
 });
 
-// CompatibilityRequest model
+app.MapPost("/getSigns", (AstrologyCalculator calculator, GetSignsRequest request) =>
+{
+    // Validate the input
+    if (request.Birthday == default)
+    {
+        return Results.BadRequest("Invalid or missing birthday.");
+    }
+
+    if (string.IsNullOrWhiteSpace(request.BirthLocation))
+    {
+        // If BirthLocation is null, calculate and return only the Sun sign
+        var sunSign = calculator.GetSunSign(request.Birthday);
+        return Results.Ok(new { SunSign = sunSign });
+    }
+    else
+    {
+        // If BirthLocation is provided, calculate and return Sun, Moon, and Rising signs
+        var sunSign = calculator.GetSunSign(request.Birthday);
+        var moonSign = calculator.GetMoonSign(request.BirthLocation, request.Birthday, request.BirthTime);
+        var risingSign = calculator.GetRisingSign(request.BirthLocation, request.Birthday, request.BirthTime);
+
+        return Results.Ok(new
+        {
+            SunSign = sunSign,
+            MoonSign = moonSign,
+            RisingSign = risingSign
+        });
+    }
+});
 
 app.Run();
-
-public class BirthdayRequest
-{
-    public required string Email { get; set; }
-    public DateTime Birthday { get; set; }
-    public TimeSpan BirthTime { get; set; }
-    public string BirthLocation { get; set; } = string.Empty;
-    public string SunSign { get; set; } = string.Empty; // Added Sun sign
-    public string MoonSign { get; set; } = string.Empty; // Added Moon sign
-    public string RisingSign { get; set; } = string.Empty; // Added Rising sign
-}
-
-// Data models for compatibility request
-public class CompatibilityRequest
-{
-    public PersonDetails Person1 { get; set; } = new PersonDetails();
-    public PersonDetails Person2 { get; set; } = new PersonDetails();
-}
-
-public class PersonDetails
-{
-    public string Name { get; set; } = string.Empty;
-    public DateTime Birthday { get; set; }
-    public TimeSpan BirthTime { get; set; }
-    public string BirthLocation { get; set; } = string.Empty;
-}
