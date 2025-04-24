@@ -1,6 +1,6 @@
 html, body {
-    font-family: 'Playfair Display', serif;
-    text-shadow: 0 0 10px #FFD700, 0 0 20px #FFC107, 0 0 30px #FFA500;
+    font-family: 'Quicksand', sans-serif;
+    /* text-shadow: 0 0 10px #FFD700, 0 0 20px #FFC107, 0 0 30px #FFA500; */
     background: url('/images/stars.jpg');
 }
 
@@ -208,4 +208,25 @@ code {
 
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
+}
+
+.button-container {
+    margin-top: 20px; /* Adds space between buttons and the location field */
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start; /* Align buttons to the left */
+    gap: 10px; /* Adds spacing between buttons */
+}
+
+button {
+    padding: 10px 20px; /* Button size */
+    border-radius: 5px; /* Rounded corners */
+    background-color: #4CAF50; /* Green background */
+    color: white; /* White text */
+    border: none; /* No border */
+    cursor: pointer; /* Changes cursor on hover */
+}
+
+button:hover {
+    background-color: #45a049; /* Slightly darker green on hover */
 }
