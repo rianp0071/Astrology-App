@@ -1,4 +1,4 @@
-﻿@page "/"
+@page "/home"
 @inject TokenStorageService TokenStorage
 @inject NavigationManager Navigation
 @inject GeminiService GeminiService
@@ -10,20 +10,18 @@
 {
 
     <p>Welcome to your astrology app, @TokenStorage.GetUserEmail()!</p>
+    <p>Save Data To View Compatibility With Other Users In The Users.</p>
     <button @onclick="Logout">Logout</button>
 
-    <!-- Add Test Component Here -->
-    <TestGemini />
 }
 else
 {
-    <div class="saturn saturn-1"></div>
-    <div class="saturn saturn-2"></div>
-    <div class="saturn saturn-3"></div>
-
-    <p>You are not authorized to view this page.</p>
+    <p>Login To Save Data And View Compatibility With Other Users.</p>
     <button @onclick="RedirectToLogin">Go to Login</button>
 }
+
+<!-- Add AI Component Here -->
+<TestGemini />
 
 @code {
     private bool IsAuthenticated => !string.IsNullOrEmpty(TokenStorage.GetToken());
