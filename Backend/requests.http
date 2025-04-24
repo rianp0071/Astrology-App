@@ -20,8 +20,13 @@ Content-Type: application/json
 
 ###
 
-# Access the unprotected route
+# Access users route
 GET http://localhost:5042/users
+
+###
+
+# Access specific user
+GET http://localhost:5042/users/hi@example.com
 
 ###
 
@@ -36,7 +41,7 @@ Content-Type: application/json
 
 {
   "email": "testuser@example.com",
-  "birthday": "1990-06-20T00:00:00",
+  "birthday": "1990-10-20T00:00:00",
   "birthTime": "16:30:00",
   "birthLocation": "New York, USA"
 }
@@ -49,7 +54,7 @@ Content-Type: application/json
 
 {
   "email": "bayneP@example.com",
-  "birthday": "1990-07-20T00:00:00",
+  "birthday": "1990-12-20T00:00:00",
   "birthTime": "18:30:00",
   "birthLocation": "New York, USA"
 }
@@ -89,6 +94,16 @@ Content-Type: application/json
   }
 }
 
+###
+#Get Signs
+POST http://localhost:5042/getSigns
+Content-Type: application/json
+
+{
+  "Birthday": "1990-05-15T00:00:00",
+  "BirthTime": "12:30:00",
+  "BirthLocation": "a"
+}
 
 ###
 
