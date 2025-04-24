@@ -7,11 +7,7 @@
 <div class="saturn saturn-3"></div>
 
 <section class="register-form"> 
-    <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 300px; margin: auto;">
-        @if (!string.IsNullOrEmpty(Message))
-        {
-            <p>@Message</p>
-        }
+    <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 300px; margin: auto;">     
         <h3>Create a New Account</h3>
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <label for="email" style="flex: 1;">Email:</label>
@@ -29,6 +25,10 @@
             <button @onclick="RegisterUser">Register</button>
             <button @onclick="RedirectToLogin">Back to Login</button>
         </div>
+        @if (!string.IsNullOrEmpty(Message))
+        {
+            <p>@Message</p>
+        }
     </div>
 </section>
 
