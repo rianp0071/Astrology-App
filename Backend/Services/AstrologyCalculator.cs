@@ -1,6 +1,7 @@
 using SwissEphNet;
 using System.Text.Json;
-using System.Text.Json.Serialization;
+using Microsoft.Extensions.Caching.Memory;
+using AstrologyApp.Models; // Adjust the namespace according to your project structure
 
 // USE CACHING FOR GEOCODING RESULTS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -8,13 +9,16 @@ public class AstrologyCalculator
 {
     private readonly string? _ephemerisPath;
     private readonly string? _apiKey;
+    private readonly IMemoryCache _cache;
+    private readonly HashSet<string> _cacheKeys = new(); // Tracks keys
 
-    public AstrologyCalculator(IConfiguration configuration)
+    public AstrologyCalculator(IConfiguration configuration, IMemoryCache cache)
     {
-        // Read the EphemerisPath from appsettings.json
         _ephemerisPath = configuration["EphemerisPath"];
         _apiKey = configuration["GoogleGeocodingApiKey"];
+        _cache = cache;
     }
+
 
     public string GetSunSign(DateTime birthday)
     {
@@ -130,8 +134,20 @@ public class AstrologyCalculator
         return geometryLocation.Longitude;
     }
 
-   
     private async Task<Location> GetLocationAsync(string location)
+    {
+        if (!_cache.TryGetValue(location, out Location? cachedLocation) || cachedLocation == null)
+        {
+            // Fetch location from API and cache it
+            var fetchedLocation = await FetchLocationFromApiAsync(location);
+            _cache.Set(location, fetchedLocation, TimeSpan.FromHours(6)); // Cache for 6 hours
+            return fetchedLocation;
+        }
+
+        return cachedLocation; // Use cached result
+    }
+   
+    private async Task<Location> FetchLocationFromApiAsync(string location)
     {
         string escapedLocation = CustomEscapeDataString(location);
         var apiUrl = $"https://maps.googleapis.com/maps/api/geocode/json?address={escapedLocation}&key={_apiKey}";
@@ -160,7 +176,7 @@ public class AstrologyCalculator
         string geometryJson = JsonSerializer.Serialize(geometry, new JsonSerializerOptions { WriteIndented = true });
         // Console.WriteLine($"Geometry JSON: {geometryJson}");
 
-        Console.WriteLine($"Location: {geometry.Location.Latitude}, {geometry.Location.Longitude}");
+        // Console.WriteLine($"Location: {geometry.Location.Latitude}, {geometry.Location.Longitude}");
 
         return geometry.Location; // Return the location only
     }
@@ -224,33 +240,41 @@ public class AstrologyCalculator
         return totalScore; // Return the final score
     }
 
-    public class GeocodingResponse
+    public int CalculateCompatibilityScoreWithCaching(
+    string yourEmail, string otherEmail,
+    BirthdayRecord yourRecord, BirthdayRecord otherRecord)
     {
-        public List<Result> Results { get; set; } = new();
-        public string Status { get; set; } = string.Empty;
+        var cacheKey = string.Compare(yourEmail, otherEmail, StringComparison.Ordinal) < 0 
+            ? $"{yourEmail}:{otherEmail}" 
+            : $"{otherEmail}:{yourEmail}";
+
+        if (_cache.TryGetValue(cacheKey, out int cachedScore))
+        {
+            return cachedScore;
+        }
+
+        var compatibilityScore = CalculateCompatibilityScore(
+            yourRecord.SunSign, yourRecord.MoonSign, yourRecord.RisingSign,
+            otherRecord.SunSign, otherRecord.MoonSign, otherRecord.RisingSign
+        );
+
+        _cache.Set(cacheKey, compatibilityScore, TimeSpan.FromHours(6));
+        _cacheKeys.Add(cacheKey); // Track the cache key
+
+        return compatibilityScore;
     }
 
-    public class Result
+
+    public void ClearCompatibilityCache(string email)
     {
-        public Geometry Geometry { get; set; } = new();
+        var keysToRemove = _cacheKeys
+            .Where(key => key.StartsWith($"{email}:") || key.EndsWith($":{email}"))
+            .ToList();
+
+        foreach (var key in keysToRemove)
+        {
+            _cache.Remove(key); // Remove from cache
+            _cacheKeys.Remove(key); // Remove from tracker
+        }
     }
-
-    public class Geometry
-    {
-        public Location Location { get; set; } = new();
-    }
-
-
-    public class Location
-    {
-        [JsonPropertyName("lat")]
-        public double Latitude { get; set; }
-
-        [JsonPropertyName("lng")]
-        public double Longitude { get; set; }
-    }
-
-
-
-
 }
