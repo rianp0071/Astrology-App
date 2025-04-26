@@ -250,6 +250,7 @@ public class AstrologyCalculator
 
         if (_cache.TryGetValue(cacheKey, out int cachedScore))
         {
+            Console.WriteLine(_cacheKeys.Count);
             return cachedScore;
         }
 
@@ -258,7 +259,7 @@ public class AstrologyCalculator
             otherRecord.SunSign, otherRecord.MoonSign, otherRecord.RisingSign
         );
 
-        _cache.Set(cacheKey, compatibilityScore, TimeSpan.FromHours(6));
+        _cache.Set(cacheKey, compatibilityScore, TimeSpan.FromSeconds(6));
         _cacheKeys.Add(cacheKey); // Track the cache key
 
         return compatibilityScore;
@@ -267,14 +268,29 @@ public class AstrologyCalculator
 
     public void ClearCompatibilityCache(string email)
     {
+        // Normalize email to avoid case-sensitivity issues
+        var normalizedEmail = email.ToLowerInvariant();
+
+        // Find keys related to the given email
         var keysToRemove = _cacheKeys
-            .Where(key => key.StartsWith($"{email}:") || key.EndsWith($":{email}"))
+            .Where(key => key.StartsWith($"{normalizedEmail}:") || key.EndsWith($":{normalizedEmail}"))
             .ToList();
 
-        foreach (var key in keysToRemove)
+        Console.WriteLine($"[Cache] Clearing {keysToRemove.Count} cache entries for email: {email}");
+
+        // Synchronize access to shared resources (_cacheKeys) for thread safety
+        lock (_cacheKeys)
         {
-            _cache.Remove(key); // Remove from cache
-            _cacheKeys.Remove(key); // Remove from tracker
+            foreach (var key in keysToRemove)
+            {
+                _cache.Remove(key); // Remove from cache
+                _cacheKeys.Remove(key); // Remove from tracker
+                Console.WriteLine($"[Cache] Removed cache key: {key}");
+            }
         }
+
+        // Log completion
+        Console.WriteLine($"[Cache] Finished clearing cache for email: {email}");
     }
+
 }
