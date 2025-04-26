@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using FrontEnd;
 using System.Net.Http.Json;
+using Blazored.SessionStorage;
 
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
@@ -28,6 +29,8 @@ builder.Services.AddScoped<TokenStorageService>();
 builder.Services.AddScoped<GeminiService>();
 builder.Services.AddScoped<CacheService>();
 builder.Services.AddMemoryCache(); // Ensure IMemoryCache is registered
+builder.Services.AddBlazoredSessionStorage();
+
 
 builder.Services.AddScoped(sp => new HttpClient
 {
