@@ -1,5 +1,3 @@
-using System.Threading.Tasks;
-
 public class BirthdayService
 {
     private readonly Dictionary<string, BirthdayRecord> _birthdays = new();
