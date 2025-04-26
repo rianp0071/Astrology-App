@@ -68,7 +68,10 @@
 
 
 @code {
-    private List<string> locations = new() { "New York, USA", "Los Angeles, USA", "Tokyo, Japan", "London, UK", "Paris, France", "Sydney, Australia", "Toronto, Canada" };
+    private List<string> locations = new() { "New York, USA", "Los Angeles, USA", "Tokyo, Japan", "London, UK", 
+        "San Francisco, USA",   "Berlin, Germany", "Moscow, Russia", "Beijing, China", "Mumbai, India", "Rio de Janeiro", 
+        "Brazil", "Cairo, Egypt", "Dubai, UAE", "Rome, Italy", "Bangkok, Thailand",
+        "Paris, France", "Sydney, Australia", "Toronto, Canada", "Frisco, Texas", "Pune, India", "Hyderabad, India" };
     private bool IsAuthenticated => !string.IsNullOrEmpty(TokenStorage.GetToken());
     private DateTime birthday = DateTime.Now;
     private DateTime birthTime = DateTime.Now; // Initialize to current time
@@ -276,7 +279,7 @@
             return $"This is my birthday: {birthday:yyyy-MM-dd} and sun sign: {signs.ElementAtOrDefault(0)}";
         }
         return $"This is my birthday: {birthday:yyyy-MM-dd}, birth time: {birthTime:HH:mm:ss}, and location: {birthLocation}. " +
-            $"These are my signs: sun sign: {signs.ElementAtOrDefault(0)}, moon sign: {signs.ElementAtOrDefault(1)}, and rising sign: {signs.ElementAtOrDefault(2)}.";
+            $"These are my signs: sun sign: {signs.ElementAtOrDefault(0)}, moon sign: {signs.ElementAtOrDefault(1)}, and rising sign: {signs.ElementAtOrDefault(2)}";
     }
 
 }
