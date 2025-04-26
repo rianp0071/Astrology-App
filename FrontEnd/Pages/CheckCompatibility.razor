@@ -1,4 +1,4 @@
-﻿@page "/"
+@page "/"
 @inject HttpClient Http
 
 <section>
@@ -63,18 +63,21 @@
         </div>
     </div>
 
-    <!-- Result -->
+    <!-- Compatibility Result -->
     @if (!string.IsNullOrWhiteSpace(compatibilityMessage))
     {
         <h4>Compatibility Results:</h4>
-        <p>@compatibilityMessage</p>
+        <p class="fade-in">@compatibilityMessage</p>
     }
 </section>
 
 @code {
     private PersonDetails person1 = new PersonDetails();
     private PersonDetails person2 = new PersonDetails();
-    private List<string> locations = new() { "New York, USA", "Los Angeles, USA", "Tokyo, Japan", "London, UK", "Paris, France", "Sydney, Australia", "Toronto, Canada" };
+    private List<string> locations = new() { "New York, USA", "Los Angeles, USA", "Tokyo, Japan", "London, UK", 
+        "San Francisco, USA",   "Berlin, Germany", "Moscow, Russia", "Beijing, China", "Mumbai, India", "Rio de Janeiro", 
+        "Brazil", "Cairo, Egypt", "Dubai, UAE", "Rome, Italy", "Bangkok, Thailand",
+        "Paris, France", "Sydney, Australia", "Toronto, Canada", "Frisco, Texas", "Pune, India", "Hyderabad, India" };
     private bool isLoading = false;
     private string compatibilityMessage = string.Empty;
 
