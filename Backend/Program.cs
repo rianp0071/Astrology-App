@@ -30,7 +30,8 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddSingleton<BirthdayService>();
-builder.Services.AddScoped<AstrologyCalculator>();
+builder.Services.AddMemoryCache(); // Registers IMemoryCache
+builder.Services.AddScoped<AstrologyCalculator>(); // Registers AstrologyCalculator as a scoped service
 
 var app = builder.Build();
 
@@ -147,9 +148,8 @@ app.MapGet("/getBirthday/{email}", (BirthdayService birthdayService, string emai
 });
 
 // WHEN SWITCHING TO A DATABASE, USE INDEXING FOR BETTER PERFORMANCE!!!!!!!!!!!!
-app.MapGet("/getTop10CompatibilityWithOtherUsers/{email}", (BirthdayService birthdayService, string email) =>
+app.MapGet("/getTop10CompatibilityWithOtherUsers/{email}", (BirthdayService birthdayService, string email, IServiceProvider serviceProvider) =>
 {
-    // Get the current user's birthday record
     var currentUser = birthdayService.GetBirthdayRecord(email);
 
     if (currentUser == null)
@@ -157,32 +157,27 @@ app.MapGet("/getTop10CompatibilityWithOtherUsers/{email}", (BirthdayService birt
         return Results.NotFound($"No birthday record found for email: {email}");
     }
 
-    // Get all other users' records
     var allUsers = birthdayService.GetAllBirthdays()
-        .Where(user => user.Email != email); // Exclude the current user
+        .Where(user => user.Email != email);
 
     if (!allUsers.Any())
     {
         return Results.NotFound("No other users found.");
     }
 
-    // PriorityQueue to maintain top 10 compatible users
     var priorityQueue = new PriorityQueue<(string Email, BirthdayRecord Record, int CompatibilityScore), int>();
-    var lockObject = new object(); // Lock object for thread safety
+    var lockObject = new object();
 
-    // Parallel Processing to calculate compatibility scores
     Parallel.ForEach(allUsers, user =>
     {
         var otherRecord = user.Record;
 
-        // Calculate compatibility score
-        var compatibilityScore = new AstrologyCalculator(new ConfigurationBuilder().Build())
-            .CalculateCompatibilityScore(
-                currentUser.SunSign, currentUser.MoonSign, currentUser.RisingSign,
-                otherRecord.SunSign, otherRecord.MoonSign, otherRecord.RisingSign
-            );
+        using var scope = serviceProvider.CreateScope();
+        var calculator = scope.ServiceProvider.GetRequiredService<AstrologyCalculator>();
 
-        // Thread-safe operations with PriorityQueue
+        var compatibilityScore = calculator.CalculateCompatibilityScoreWithCaching(
+            email, user.Email, currentUser, otherRecord);
+
         lock (lockObject)
         {
             if (priorityQueue.Count < 10)
@@ -191,23 +186,20 @@ app.MapGet("/getTop10CompatibilityWithOtherUsers/{email}", (BirthdayService birt
             }
             else if (compatibilityScore > priorityQueue.Peek().CompatibilityScore)
             {
-                priorityQueue.Dequeue(); // Remove the smallest
+                priorityQueue.Dequeue();
                 priorityQueue.Enqueue((user.Email, otherRecord, compatibilityScore), compatibilityScore);
             }
         }
     });
 
-    // Extract top 10 users from the priority queue
     var top10Users = new List<(string Email, BirthdayRecord Record, int CompatibilityScore)>();
     while (priorityQueue.Count > 0)
     {
         top10Users.Add(priorityQueue.Dequeue());
     }
 
-    // Sort the results in descending order by compatibility score
     top10Users = top10Users.OrderByDescending(u => u.CompatibilityScore).ToList();
 
-    // Format the response
     var response = top10Users.Select(user => new
     {
         user.Email,
@@ -222,6 +214,7 @@ app.MapGet("/getTop10CompatibilityWithOtherUsers/{email}", (BirthdayService birt
 
     return Results.Ok(response);
 });
+
 
 app.MapPost("/calculateCompatibility", async (AstrologyCalculator calculator, CompatibilityRequest request) =>
 {
