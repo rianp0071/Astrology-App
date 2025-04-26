@@ -2,8 +2,6 @@
 @inject HttpClient Http
 @inject TokenStorageService TokenStorage
 @inject NavigationManager Navigation
-@using Microsoft.Extensions.Caching.Memory;
-
 
 @* Enhance UI/UX:
 
@@ -63,13 +61,15 @@ If the number of users grows, you can implement pagination or a search box to ma
     }
 </section>
 
-@inject IMemoryCache MemoryCache
+@inject CacheService CacheService
 
 @code {
     private List<UserBirth>? userBirths;
     private UserBirth? currentUserBirth;
 
     private const string UserBirthsCacheKey = "UserBirthsCacheKey";
+
+    private const string CurrentUserBirthCacheKey = "CurrentUserBirthCacheKey";
 
     protected override async Task OnInitializedAsync()
     {
@@ -80,44 +80,40 @@ If the number of users grows, you can implement pagination or a search box to ma
 
         try
         {
-            // Fetch current user birth data first
             var currentUserEmail = TokenStorage.GetUserEmail();
-            currentUserBirth = await Http.GetFromJsonAsync<UserBirth>(
-                $"http://localhost:5042/getBirthday/{currentUserEmail}");
+
+            // Fetch current user data from cache
+            currentUserBirth = CacheService.GetFromCache<UserBirth>("CurrentUserBirthCacheKey");
 
             if (currentUserBirth == null)
             {
-                Console.WriteLine("Current user birth data is null.");
-                userBirths = new List<UserBirth>(); // Handle gracefully if the current user's birth data is unavailable
-                return;
+                currentUserBirth = await Http.GetFromJsonAsync<UserBirth>(
+                    $"http://localhost:5042/getBirthday/{currentUserEmail}");
+
+                if (currentUserBirth != null)
+                {
+                    CacheService.SetCache("CurrentUserBirthCacheKey", currentUserBirth, TimeSpan.FromMinutes(2));
+                }
             }
 
-            // Check if compatibility data exists in cache
-            if (!MemoryCache.TryGetValue(UserBirthsCacheKey, out List<UserBirth>? cachedUserBirths))
+            userBirths = CacheService.GetFromCache<List<UserBirth>>("UserBirthsCacheKey");
+
+            if (userBirths == null)
             {
-                // Fetch compatibility data if not cached
-                var topCompatibleUsers = await Http.GetFromJsonAsync<List<UserBirth>>(
+                userBirths = await Http.GetFromJsonAsync<List<UserBirth>>(
                     $"http://localhost:5042/getTop10CompatibilityWithOtherUsers/{currentUserEmail}");
 
-                cachedUserBirths = topCompatibleUsers ?? new List<UserBirth>();
-
-                // Cache compatibility data for 10 seconds
-                var cacheOptions = new MemoryCacheEntryOptions
-                {
-                    AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(30)
-                };
-                MemoryCache.Set(UserBirthsCacheKey, cachedUserBirths, cacheOptions);
+                CacheService.SetCache("UserBirthsCacheKey", userBirths, TimeSpan.FromSeconds(30));
             }
-
-            // Use cached compatibility data
-            userBirths = cachedUserBirths;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error fetching data: {ex.Message}");
-            userBirths = new List<UserBirth>(); // Handle gracefully if either API call fails
+            currentUserBirth = null;
+            userBirths = new List<UserBirth>();
         }
     }
+
 
     private void NavigateToLogin()
     {
