@@ -26,7 +26,8 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 
 builder.Services.AddScoped<TokenStorageService>();
 builder.Services.AddScoped<GeminiService>();
-builder.Services.AddMemoryCache();
+builder.Services.AddScoped<CacheService>();
+builder.Services.AddMemoryCache(); // Ensure IMemoryCache is registered
 
 builder.Services.AddScoped(sp => new HttpClient
 {
