@@ -1,21 +1,28 @@
-using System.Net.Http;
 using System.Net.Http.Json;
-using System.Threading.Tasks;
 using AstrologyApp.Models;
+using Microsoft.Extensions.Caching.Memory;
 
 public class GeminiService
 {
     private readonly HttpClient _httpClient;
     private readonly AppSettings _settings;
+    private readonly IMemoryCache _cache;
 
-    public GeminiService(HttpClient httpClient, AppSettings settings)
+    public GeminiService(HttpClient httpClient, AppSettings settings, IMemoryCache cache)
     {
         _httpClient = httpClient;
         _settings = settings;
+        _cache = cache;
     }
 
     public async Task<string> AskGeminiAsync(string userInput)
     {
+        // Check if the response is in cache
+        if (_cache.TryGetValue(userInput, out string? cachedResponse) && cachedResponse != null)
+        {
+            return cachedResponse;
+        }
+
         try
         {
             var requestPayload = new RequestPayload
@@ -40,8 +47,16 @@ public class GeminiService
                 var result = await response.Content.ReadFromJsonAsync<GeminiResponse>();
                 if (result?.Candidates != null && result.Candidates.Length > 0)
                 {
-                    var firstCandidate = result.Candidates[0];
-                    return firstCandidate.Content?.Parts?[0]?.Text ?? "No text found.";
+                    var output = result.Candidates[0].Content?.Parts?[0]?.Text ?? "No text found.";
+
+                    // Cache the result for 24 hours
+                    var cacheEntryOptions = new MemoryCacheEntryOptions
+                    {
+                        AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10)
+                    };
+                    _cache.Set(userInput, output, cacheEntryOptions);
+
+                    return output;
                 }
                 return "No candidates found.";
             }
@@ -57,4 +72,3 @@ public class GeminiService
         }
     }
 }
-
