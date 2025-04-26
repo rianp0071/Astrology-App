@@ -7,16 +7,13 @@
 
 <div>
     <!-- Date input -->
-    <h5>Input Your Birthday</h5>
     <input @bind="birthday" type="date" style="width:300px;" />
 
     <!-- Time input -->
-    <h5>Input Your Time of Birth</h5>
     <input @bind="birthTime" type="time" style="width:300px;" />
 
     <!-- Location input -->
-    <h5>Input Your Location of Birth</h5>
-    <select @bind="birthLocation" style="width:300px;">
+    <select @bind="birthLocation" style="width:300px; height:1.75rem;">
         <option value="">Select location...</option>
         @foreach (var location in locations)
         {
@@ -24,19 +21,19 @@
         }
     </select>
 
+
     <!-- Buttons (moved below location field) -->
-    <div class="button-container" style="display: flex; flex-direction: column; gap: 1rem; max-width: 300px;">
+    <div class="button-container" style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; gap: 1rem; max-width: 50%; flex-wrap: wrap;">
         @if (IsAuthenticated) 
         {
-            <button @onclick="SaveBirthData">Save Birth Data</button>
+            <button @onclick="SaveBirthData" disabled=@isLoading1 style="flex-grow: 1;">Save Birth Data</button>
         }    
-        <button @onclick="DescribeSigns">Learn About My Signs</button>
-
-        <div style="display: flex; flex-direction: column; gap: 1rem;">
-            <button @onclick="DescribeHoroscope">Learn About My Horoscope</button>
-            <button @onclick="DescribeCompatibility">Learn About My Compatibility</button>
-        </div>
+        <button @onclick="DescribeSigns" disabled=@isLoading1 style="flex-grow: 1;">Learn About My Signs</button>
+        <button @onclick="DescribeHoroscope" disabled=@isLoading1 style="flex-grow: 1;">Learn About My Horoscope</button>
+        <button @onclick="DescribeCompatibility" disabled=@isLoading1 style="flex-grow: 1;">Learn About My Compatibility</button>
     </div>
+
+
 </div>
 
 <!-- Spinner -->
@@ -49,11 +46,13 @@
 <!-- Response -->
 <p>@sunSignDesc</p>
 
+<br/>
+
 <div>
     <!-- Text input (appears below) -->
-    <h5>Let's Chat! Express Your Inquisitions</h5>
+    <h5>Personal ChatBot--Let's Chat! Express Your Inquisitions</h5>
     <input @bind="userInput" type="text" placeholder="Write something..." style="width:300px;" />
-    <button @onclick="AskGemini">Ask</button>
+    <button @onclick="AskGemini" disabled=@isLoading2>Ask</button>
 </div>
 
 <!-- Spinner -->
@@ -66,24 +65,94 @@
 <!-- Response -->
 <p>@responseText</p>
 
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage 
 
 @code {
     private List<string> locations = new() { "New York, USA", "Los Angeles, USA", "Tokyo, Japan", "London, UK", 
-        "San Francisco, USA",   "Berlin, Germany", "Moscow, Russia", "Beijing, China", "Mumbai, India", "Rio de Janeiro", 
-        "Brazil", "Cairo, Egypt", "Dubai, UAE", "Rome, Italy", "Bangkok, Thailand",
-        "Paris, France", "Sydney, Australia", "Toronto, Canada", "Frisco, Texas", "Pune, India", "Hyderabad, India" };
-    
-    @* use session storage *@
+    "San Francisco, USA", "Berlin, Germany", "Moscow, Russia", "Beijing, China", "Mumbai, India", "Rio de Janeiro", 
+    "Brazil", "Cairo, Egypt", "Dubai, UAE", "Rome, Italy", "Bangkok, Thailand",
+    "Paris, France", "Sydney, Australia", "Toronto, Canada", "Frisco, Texas", "Pune, India", "Hyderabad, India" };
+
+    private const string BirthdayKey = "UserBirthday";
+    private const string BirthTimeKey = "UserBirthTime";
+    private const string BirthLocationKey = "UserBirthLocation";
+    private const string UserInputKey = "UserInput";
+
     private bool IsAuthenticated => !string.IsNullOrEmpty(TokenStorage.GetToken());
-    private DateTime birthday = DateTime.Now;
-    private DateTime birthTime = DateTime.Now; // Initialize to current time
-    private string birthLocation = string.Empty;
-    private string userInput = string.Empty;
     private string responseText = string.Empty;
     private string sunSignDesc = string.Empty;
     private bool isLoading1 = false;
     private bool isLoading2 = false;
 
+    // session storage for user inpuits
+
+    private DateTime birthday
+    {
+        get => _birthday;
+        set
+        {
+            _birthday = value;
+            SessionStorage.SetItemAsync(BirthdayKey, _birthday);
+        }
+    }
+    private DateTime _birthday;
+
+    private DateTime birthTime
+    {
+        get => _birthTime;
+        set
+        {
+            _birthTime = value;
+            SessionStorage.SetItemAsync(BirthTimeKey, _birthTime);
+        }
+    }
+    private DateTime _birthTime;
+
+    private string birthLocation
+    {
+        get => _birthLocation;
+        set
+        {
+            _birthLocation = value;
+            SessionStorage.SetItemAsync(BirthLocationKey, _birthLocation);
+        }
+    }
+    private string _birthLocation = string.Empty;
+
+    private Timer? debounceTimer;
+
+    private string userInput
+    {
+        get => _userInput;
+        set
+        {
+            _userInput = value;
+            debounceTimer?.Dispose();
+            debounceTimer = new Timer(async _ =>
+            {
+                await SessionStorage.SetItemAsync(UserInputKey, _userInput);
+            }, null, 300, Timeout.Infinite);
+        }
+    }
+    private string _userInput = string.Empty;
+
+    @inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load values from session storage on page load
+        var storedBirthday = await SessionStorage.GetItemAsync<DateTime?>(BirthdayKey);
+        var storedBirthTime = await SessionStorage.GetItemAsync<DateTime?>(BirthTimeKey);
+        var storedBirthLocation = await SessionStorage.GetItemAsync<string>(BirthLocationKey);
+        var storedUserInput = await SessionStorage.GetItemAsync<string>(UserInputKey);
+
+        birthday = storedBirthday ?? DateTime.Now;
+        birthTime = storedBirthTime ?? DateTime.Now;
+        birthLocation = storedBirthLocation ?? string.Empty;
+        userInput = storedUserInput ?? string.Empty;
+    }
+
+    
     @inject CacheService CacheService
 
     private async Task SaveBirthData()
