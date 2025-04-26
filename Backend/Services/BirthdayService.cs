@@ -1,3 +1,5 @@
+using System.Threading.Tasks;
+
 public class BirthdayService
 {
     private readonly Dictionary<string, BirthdayRecord> _birthdays = new();
@@ -9,7 +11,7 @@ public class BirthdayService
     }
 
     // Save or update the birthday data associated with an email
-    public void SaveBirthday(string email, DateTime birthday, TimeSpan birthTime, string birthLocation)
+    public async Task SaveBirthdayAsync(string email, DateTime birthday, TimeSpan birthTime, string birthLocation)
     {
         try
         {
@@ -28,7 +30,7 @@ public class BirthdayService
 
             var sunSign = calculator.GetSunSign(birthday); // Calculate Sun sign
             var moonSign = calculator.GetMoonSign(birthLocation, birthday, birthTime); // Calculate Moon sign
-            var risingSign = calculator.GetRisingSign(birthLocation, birthday, birthTime); // Calculate Rising sign
+            var risingSign = await calculator.GetRisingSignAsync(birthLocation, birthday, birthTime); // Calculate Rising sign
 
             _birthdays[email] = new BirthdayRecord
             {
