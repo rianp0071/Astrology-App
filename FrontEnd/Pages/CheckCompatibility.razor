@@ -6,19 +6,18 @@
     <p>It's The Moment Of Truth</p>
     <section style="display: flex; flex-direction: row; gap: 2rem; max-width: 700px;">
         <div>
-            <!-- Person 1 Details -->
             <h4>Lovebird 1</h4>
             <p>Name:</p>
-            <input @bind="person1.Name" type="text" placeholder="Enter name..." style="width:300px;" />
+            <input @bind="Person1Name" type="text" placeholder="Enter name..." style="width:300px;" />
 
             <p>Birthday:</p>
-            <input @bind="person1.Birthday" type="date" style="width:300px;" />
+            <input @bind="Person1Birthday" type="date" style="width:300px;" />
 
             <p>Time of Birth:</p>
-            <input @bind="person1.BirthTime" type="time" style="width:300px;" />
+            <input @bind="Person1BirthTime" type="time" style="width:300px;" />
 
             <p>Location of Birth:</p>
-            <select @bind="person1.BirthLocation" style="width:300px;">
+            <select @bind="Person1BirthLocation" style="width:300px;">
                 <option value="">Select location...</option>
                 @foreach (var location in locations)
                 {
@@ -28,19 +27,18 @@
         </div>
 
         <div>
-            <!-- Person 2 Details -->
             <h4>Lovebird 2</h4>
             <p>Name:</p>
-            <input @bind="person2.Name" type="text" placeholder="Enter name..." style="width:300px;" />
+            <input @bind="Person2Name" type="text" placeholder="Enter name..." style="width:300px;" />
 
             <p>Birthday:</p>
-            <input @bind="person2.Birthday" type="date" style="width:300px;" />
+            <input @bind="Person2Birthday" type="date" style="width:300px;" />
 
             <p>Time of Birth:</p>
-            <input @bind="person2.BirthTime" type="time" style="width:300px;" />
+            <input @bind="Person2BirthTime" type="time" style="width:300px;" />
 
             <p>Location of Birth:</p>
-            <select @bind="person2.BirthLocation" style="width:300px;">
+            <select @bind="Person2BirthLocation" style="width:300px;">
                 <option value="">Select location...</option>
                 @foreach (var location in locations)
                 {
@@ -53,7 +51,7 @@
 
     <!-- Button -->
     <div style="margin-top:30px;">
-        <button @onclick="GenerateCompatibility" style="width:300px;">Calculate Compatibility</button>
+        <button @onclick="GenerateCompatibility" style="width:300px;" disabled="@isLoading">Calculate Compatibility</button>
     </div>
 
     <!-- Spinner -->
@@ -71,20 +69,157 @@
     }
 </section>
 
+@inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+
 @code {
     private PersonDetails person1 = new PersonDetails();
     private PersonDetails person2 = new PersonDetails();
     private List<string> locations = new() { "New York, USA", "Los Angeles, USA", "Tokyo, Japan", "London, UK", 
-        "San Francisco, USA",   "Berlin, Germany", "Moscow, Russia", "Beijing, China", "Mumbai, India", "Rio de Janeiro", 
+        "San Francisco, USA", "Berlin, Germany", "Moscow, Russia", "Beijing, China", "Mumbai, India", "Rio de Janeiro", 
         "Brazil", "Cairo, Egypt", "Dubai, UAE", "Rome, Italy", "Bangkok, Thailand",
         "Paris, France", "Sydney, Australia", "Toronto, Canada", "Frisco, Texas", "Pune, India", "Hyderabad, India" };
     private bool isLoading = false;
     private string compatibilityMessage = string.Empty;
 
+    private const string Person1Key = "Person1";
+    private const string Person2Key = "Person2";
+
+    // Reactive properties with session storage updates and logging
+    private string Person1Name
+    {
+        get => person1.Name;
+        set
+        {
+            person1.Name = value;
+            Console.WriteLine($"[LOG] Person1Name set to: {value}");
+            _ = SavePersonDetailsAsync(person1, Person1Key);
+        }
+    }
+
+    private DateTime Person1Birthday
+    {
+        get => person1.Birthday;
+        set
+        {
+            person1.Birthday = value;
+            Console.WriteLine($"[LOG] Person1Birthday set to: {value}");
+            _ = SavePersonDetailsAsync(person1, Person1Key);
+        }
+    }
+
+    private DateTime Person1BirthTime
+    {
+        get => person1.BirthTime;
+        set
+        {
+            person1.BirthTime = value;
+            Console.WriteLine($"[LOG] Person1BirthTime set to: {value}");
+            _ = SavePersonDetailsAsync(person1, Person1Key);
+        }
+    }
+
+    private string Person1BirthLocation
+    {
+        get => person1.BirthLocation;
+        set
+        {
+            person1.BirthLocation = value;
+            Console.WriteLine($"[LOG] Person1BirthLocation set to: {value}");
+            _ = SavePersonDetailsAsync(person1, Person1Key);
+        }
+    }
+
+    private string Person2Name
+    {
+        get => person2.Name;
+        set
+        {
+            person2.Name = value;
+            Console.WriteLine($"[LOG] Person2Name set to: {value}");
+            _ = SavePersonDetailsAsync(person2, Person2Key);
+        }
+    }
+
+    private DateTime Person2Birthday
+    {
+        get => person2.Birthday;
+        set
+        {
+            person2.Birthday = value;
+            Console.WriteLine($"[LOG] Person2Birthday set to: {value}");
+            _ = SavePersonDetailsAsync(person2, Person2Key);
+        }
+    }
+
+    private DateTime Person2BirthTime
+    {
+        get => person2.BirthTime;
+        set
+        {
+            person2.BirthTime = value;
+            Console.WriteLine($"[LOG] Person2BirthTime set to: {value}");
+            _ = SavePersonDetailsAsync(person2, Person2Key);
+        }
+    }
+
+    private string Person2BirthLocation
+    {
+        get => person2.BirthLocation;
+        set
+        {
+            person2.BirthLocation = value;
+            Console.WriteLine($"[LOG] Person2BirthLocation set to: {value}");
+            _ = SavePersonDetailsAsync(person2, Person2Key);
+        }
+    }
+
+    private async Task SavePersonDetailsAsync(PersonDetails person, string key)
+    {
+        try
+        {
+            var jsonPerson = System.Text.Json.JsonSerializer.Serialize(person);
+            await SessionStorage.SetItemAsync(key, jsonPerson);
+            Console.WriteLine($"[LOG] Successfully saved {key} to session storage.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Error saving {key} to session storage: {ex.Message}");
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Console.WriteLine("[LOG] Initializing component and loading session storage data...");
+
+            var storedPerson1 = await SessionStorage.GetItemAsync<string>(Person1Key);
+            var storedPerson2 = await SessionStorage.GetItemAsync<string>(Person2Key);
+
+            person1 = !string.IsNullOrWhiteSpace(storedPerson1)
+                ? System.Text.Json.JsonSerializer.Deserialize<PersonDetails>(storedPerson1)!
+                : new PersonDetails();
+
+            person2 = !string.IsNullOrWhiteSpace(storedPerson2)
+                ? System.Text.Json.JsonSerializer.Deserialize<PersonDetails>(storedPerson2)!
+                : new PersonDetails();
+
+            Console.WriteLine($"[LOG] Loaded Person1: {System.Text.Json.JsonSerializer.Serialize(person1)}");
+            Console.WriteLine($"[LOG] Loaded Person2: {System.Text.Json.JsonSerializer.Serialize(person2)}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Error during initialization: {ex.Message}");
+        }
+    }
+
     private async Task GenerateCompatibility()
     {
+        // Prevent duplicate calls by disabling the button
         isLoading = true;
         compatibilityMessage = string.Empty;
+
+        Console.WriteLine("[LOG] GenerateCompatibility called...");
 
         try
         {
@@ -94,6 +229,7 @@
                 string.IsNullOrWhiteSpace(person1.BirthLocation) || string.IsNullOrWhiteSpace(person2.BirthLocation))
             {
                 compatibilityMessage = "Please provide valid details for both individuals.";
+                Console.WriteLine("[ERROR] Validation failed: Missing or invalid details.");
                 return;
             }
 
@@ -116,24 +252,30 @@
                 }
             };
 
+            Console.WriteLine($"[LOG] Sending compatibility request: {System.Text.Json.JsonSerializer.Serialize(compatibilityRequest)}");
+
             // Send request to API
             var response = await Http.PostAsJsonAsync("http://localhost:5042/calculateCompatibility", compatibilityRequest);
 
             if (response.IsSuccessStatusCode)
             {
                 compatibilityMessage = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"[LOG] Compatibility response: {compatibilityMessage}");
             }
             else
             {
                 compatibilityMessage = "Failed to calculate compatibility. Please try again.";
+                Console.WriteLine($"[ERROR] API call failed with status code: {response.StatusCode}");
             }
         }
         catch (Exception ex)
         {
             compatibilityMessage = $"An error occurred: {ex.Message}";
+            Console.WriteLine($"[ERROR] Exception during compatibility generation: {ex.Message}");
         }
         finally
         {
+            // Re-enable the button after function execution
             isLoading = false;
         }
     }
