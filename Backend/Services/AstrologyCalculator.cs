@@ -1,13 +1,19 @@
 using SwissEphNet;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+// USE CACHING FOR GEOCODING RESULTS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 public class AstrologyCalculator
 {
     private readonly string? _ephemerisPath;
+    private readonly string? _apiKey;
 
     public AstrologyCalculator(IConfiguration configuration)
     {
         // Read the EphemerisPath from appsettings.json
         _ephemerisPath = configuration["EphemerisPath"];
+        _apiKey = configuration["GoogleGeocodingApiKey"];
     }
 
     public string GetSunSign(DateTime birthday)
@@ -62,14 +68,14 @@ public class AstrologyCalculator
         return GetZodiacSign(moonPosition[0]); // [0] is the longitude
     }
 
-    public string GetRisingSign(string birthLocation, DateTime birthday, TimeSpan birthTime)
+    public async Task<string> GetRisingSignAsync(string birthLocation, DateTime birthday, TimeSpan birthTime)
     {
         using var se = new SwissEph(); // Initialize Swiss Ephemeris
         
         se.swe_set_ephe_path(_ephemerisPath); // Set the ephemeris path
 
-        double latitude = GetLatitude(birthLocation); // Fetch latitude
-        double longitude = GetLongitude(birthLocation); // Fetch longitude
+        double latitude = await GetLatitudeAsync(birthLocation); // Fetch latitude
+        double longitude = await GetLongitudeAsync(birthLocation); // Fetch longitude
         double julianDay = se.swe_julday(birthday.Year, birthday.Month, birthday.Day, birthTime.TotalHours, SwissEph.SE_GREG_CAL);
 
         double[] houses = new double[13]; // Array for house cusps (0-indexed)
@@ -110,17 +116,66 @@ public class AstrologyCalculator
         };
     }
 
-    private double GetLatitude(string location)
+    // Method to fetch latitude
+    private async Task<double> GetLatitudeAsync(string location)
     {
-        // Replace with geocoding API logic
-        return 37.7749; // Example: San Francisco
+        var geometryLocation = await GetLocationAsync(location);
+        return geometryLocation.Latitude;
     }
 
-    private double GetLongitude(string location)
+    // Method to fetch latitude
+    private async Task<double> GetLongitudeAsync(string location)
     {
-        // Replace with geocoding API logic
-        return -122.4194; // Example: San Francisco
+        var geometryLocation = await GetLocationAsync(location);
+        return geometryLocation.Longitude;
     }
+
+   
+    private async Task<Location> GetLocationAsync(string location)
+    {
+        string escapedLocation = CustomEscapeDataString(location);
+        var apiUrl = $"https://maps.googleapis.com/maps/api/geocode/json?address={escapedLocation}&key={_apiKey}";
+
+        using var client = new HttpClient();
+        // Console.WriteLine($"API URL: {apiUrl}");
+
+        var response = await client.GetAsync(apiUrl);
+        response.EnsureSuccessStatusCode();
+
+        var rawJson = await response.Content.ReadAsStringAsync();
+        // Console.WriteLine($"Raw JSON Response: {rawJson}");
+
+        var options = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        };
+        var result = JsonSerializer.Deserialize<GeocodingResponse>(rawJson, options);
+
+        if (result?.Status != "OK" || result?.Results == null || !result.Results.Any())
+        {
+            throw new Exception($"Geocoding API error: {result?.Status}");
+        }
+
+        var geometry = result.Results.First().Geometry;
+        string geometryJson = JsonSerializer.Serialize(geometry, new JsonSerializerOptions { WriteIndented = true });
+        // Console.WriteLine($"Geometry JSON: {geometryJson}");
+
+        Console.WriteLine($"Location: {geometry.Location.Latitude}, {geometry.Location.Longitude}");
+
+        return geometry.Location; // Return the location only
+    }
+
+
+
+    private string CustomEscapeDataString(string location)
+    {
+        // Escape the location
+        var escapedLocation = Uri.EscapeDataString(location);
+
+        // Replace "%2C" back to ","
+        return escapedLocation.Replace("%2C%20", ",");
+    }
+
 
     private bool IsCompatible(string yourSunSign, string otherSunSign)
     {
@@ -168,5 +223,34 @@ public class AstrologyCalculator
 
         return totalScore; // Return the final score
     }
+
+    public class GeocodingResponse
+    {
+        public List<Result> Results { get; set; } = new();
+        public string Status { get; set; } = string.Empty;
+    }
+
+    public class Result
+    {
+        public Geometry Geometry { get; set; } = new();
+    }
+
+    public class Geometry
+    {
+        public Location Location { get; set; } = new();
+    }
+
+
+    public class Location
+    {
+        [JsonPropertyName("lat")]
+        public double Latitude { get; set; }
+
+        [JsonPropertyName("lng")]
+        public double Longitude { get; set; }
+    }
+
+
+
 
 }
