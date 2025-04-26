@@ -60,7 +60,7 @@ app.MapGet("/unprotected", () => "This is an unprotected route!");
 app.MapGet("/", () => "This is a protected route!")
     .RequireAuthorization();
 
-app.MapPost("/saveBirthday", async (BirthdayService birthdayService, BirthdayRequest request) =>
+app.MapPost("/saveBirthday", async (BirthdayService birthdayService, BirthdayRequest request, AstrologyCalculator calculator) =>
 {
     try
     {
@@ -85,6 +85,7 @@ app.MapPost("/saveBirthday", async (BirthdayService birthdayService, BirthdayReq
         }
 
         await birthdayService.SaveBirthdayAsync(request.Email, request.Birthday, request.BirthTime, request.BirthLocation);
+        calculator.ClearCompatibilityCache(request.Email); // Clear cache for the user after saving birthday
 
         return Results.Ok("Birthday data saved successfully!");
     }
