@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace AstrologyApp.Models // Replace with your project's namespace
 {
     public class BirthdayRequest
@@ -30,5 +32,31 @@ namespace AstrologyApp.Models // Replace with your project's namespace
         public DateTime Birthday { get; set; }
         public TimeSpan BirthTime { get; set; }
         public string? BirthLocation { get; set; } // Optional field for location
+    }
+
+    public class GeocodingResponse
+    {
+        public List<Result> Results { get; set; } = new();
+        public string Status { get; set; } = string.Empty;
+    }
+
+    public class Result
+    {
+        public Geometry Geometry { get; set; } = new();
+    }
+
+    public class Geometry
+    {
+        public Location Location { get; set; } = new();
+    }
+
+
+    public class Location
+    {
+        [JsonPropertyName("lat")]
+        public double Latitude { get; set; }
+
+        [JsonPropertyName("lng")]
+        public double Longitude { get; set; }
     }
 }
