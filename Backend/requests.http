@@ -56,7 +56,20 @@ Content-Type: application/json
   "email": "bayneP@example.com",
   "birthday": "1990-12-20T00:00:00",
   "birthTime": "18:30:00",
-  "birthLocation": "New York, USA"
+  "birthLocation": "Los Angelos, USA"
+}
+
+###
+
+# Save Birthday
+POST http://localhost:5042/saveBirthday
+Content-Type: application/json
+
+{
+  "email": "realbayne@example.com",
+  "birthday": "1990-05-07T00:00:00",
+  "birthTime": "02:14:00",
+  "birthLocation": "Joplin, USA"
 }
 
 
@@ -102,7 +115,7 @@ Content-Type: application/json
 {
   "Birthday": "1990-05-15T00:00:00",
   "BirthTime": "12:30:00",
-  "BirthLocation": "a"
+  "BirthLocation": "Frisco, USA"
 }
 
 ###
