@@ -59,11 +59,10 @@ app.MapGet("/unprotected", () => "This is an unprotected route!");
 app.MapGet("/", () => "This is a protected route!")
     .RequireAuthorization();
 
-app.MapPost("/saveBirthday", (BirthdayService birthdayService, BirthdayRequest request) =>
+app.MapPost("/saveBirthday", async (BirthdayService birthdayService, BirthdayRequest request) =>
 {
     try
     {
-        // Validate the input
         if (string.IsNullOrWhiteSpace(request.Email))
         {
             return Results.BadRequest("Email cannot be empty.");
@@ -84,20 +83,17 @@ app.MapPost("/saveBirthday", (BirthdayService birthdayService, BirthdayRequest r
             return Results.BadRequest("Birth location cannot be empty.");
         }
 
-        // Save the birthday and additional information
-        birthdayService.SaveBirthday(request.Email, request.Birthday, request.BirthTime, request.BirthLocation);
+        await birthdayService.SaveBirthdayAsync(request.Email, request.Birthday, request.BirthTime, request.BirthLocation);
 
         return Results.Ok("Birthday data saved successfully!");
     }
     catch (Exception ex)
     {
-        // Log the exception (optional)
         Console.WriteLine($"An error occurred: {ex.Message}");
-
-        // Return a generic error response
         return Results.Problem("An error occurred while saving the birthday. Please try again later.");
     }
 });
+
 
 
 app.MapGet("/getAllUsersWithBirthdays", (BirthdayService birthdayService) =>
@@ -227,7 +223,7 @@ app.MapGet("/getTop10CompatibilityWithOtherUsers/{email}", (BirthdayService birt
     return Results.Ok(response);
 });
 
-app.MapPost("/calculateCompatibility", (AstrologyCalculator calculator, CompatibilityRequest request) =>
+app.MapPost("/calculateCompatibility", async (AstrologyCalculator calculator, CompatibilityRequest request) =>
 {
     try
     {
@@ -240,12 +236,12 @@ app.MapPost("/calculateCompatibility", (AstrologyCalculator calculator, Compatib
         // Dynamically calculate Sun sign, Moon sign, and Rising sign for Person 1
         var person1SunSign = calculator.GetSunSign(request.Person1.Birthday);
         var person1MoonSign = calculator.GetMoonSign(request.Person1.BirthLocation, request.Person1.Birthday, request.Person1.BirthTime);
-        var person1RisingSign = calculator.GetRisingSign(request.Person1.BirthLocation, request.Person1.Birthday, request.Person1.BirthTime);
+        var person1RisingSign = await calculator.GetRisingSignAsync(request.Person1.BirthLocation, request.Person1.Birthday, request.Person1.BirthTime);
 
         // Dynamically calculate Sun sign, Moon sign, and Rising sign for Person 2
         var person2SunSign = calculator.GetSunSign(request.Person2.Birthday);
         var person2MoonSign = calculator.GetMoonSign(request.Person2.BirthLocation, request.Person2.Birthday, request.Person2.BirthTime);
-        var person2RisingSign = calculator.GetRisingSign(request.Person2.BirthLocation, request.Person2.Birthday, request.Person2.BirthTime);
+        var person2RisingSign = await calculator.GetRisingSignAsync(request.Person2.BirthLocation, request.Person2.Birthday, request.Person2.BirthTime);
 
         // Calculate compatibility score
         var compatibilityScore = calculator.CalculateCompatibilityScore(
@@ -274,7 +270,7 @@ app.MapPost("/calculateCompatibility", (AstrologyCalculator calculator, Compatib
     }
 });
 
-app.MapPost("/getSigns", (AstrologyCalculator calculator, GetSignsRequest request) =>
+app.MapPost("/getSigns", async (AstrologyCalculator calculator, GetSignsRequest request) =>
 {
     // Validate the input
     if (request.Birthday == default)
@@ -293,7 +289,7 @@ app.MapPost("/getSigns", (AstrologyCalculator calculator, GetSignsRequest reques
         // If BirthLocation is provided, calculate and return Sun, Moon, and Rising signs
         var sunSign = calculator.GetSunSign(request.Birthday);
         var moonSign = calculator.GetMoonSign(request.BirthLocation, request.Birthday, request.BirthTime);
-        var risingSign = calculator.GetRisingSign(request.BirthLocation, request.Birthday, request.BirthTime);
+        var risingSign = await calculator.GetRisingSignAsync(request.BirthLocation, request.Birthday, request.BirthTime);
 
         return Results.Ok(new
         {
