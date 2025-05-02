@@ -53,7 +53,7 @@
             if (response.IsSuccessStatusCode)
             {
                 Message = "Registration successful!";
-                Navigation.NavigateTo("/login");
+                Navigation.NavigateTo($"/create-profile/{Email}");
             }
             else
             {
