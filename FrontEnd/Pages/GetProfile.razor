@@ -1,0 +1,147 @@
+@page "/getProfile/{email}"
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject CacheService CacheService
+@using System.Net.Http.Json
+
+<section style="display: flex; flex-direction: column; gap: 1rem; max-width: 600px; margin: auto;">
+    @if (userProfile == null)
+    {
+        <p>Loading profile...</p>
+        <button @onclick="NavigateBack" style="width: 200px;">Back to Users</button>
+    }
+    else if (string.IsNullOrWhiteSpace(userProfile.Email))
+    {
+        <p>Profile not found.</p>
+        <button @onclick="NavigateBack" style="width: 200px;">Back to Users</button>
+    }
+    else
+    {
+        <section style="display: flex; flex-direction: column; align-items: center; gap: 1rem; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); background-color: #f9f9f9;">
+            <h2 style="color: #333;">@userProfile.Name's Profile</h2>
+
+            <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 1.1rem; color: black;">
+                <p style="color: #333;"><strong>Email:</strong> @userProfile.Email</p>
+                <p style="color: #333;"><strong>Age:</strong> @userProfile.Age</p>
+                <p style="color: #333;"><strong>Pronouns:</strong> @userProfile.Pronouns</p>
+                <p style="color: #333;"><strong>Description:</strong> @userProfile.Description</p>
+            </div>
+
+            <hr style="width: 100%; border-top: 1px solid #ccc;" />
+
+            <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 1.1rem; color: #444;">
+                <p><strong style="color: #333;">Sun Sign:</strong> <span style="color: #ff9800;">@(signs?.SunSign ?? "Calculating...")</span></p>
+                <p><strong style="color: #333;">Moon Sign:</strong> <span style="color: #3f51b5;">@(signs?.MoonSign ?? "Calculating...")</span></p>
+                <p><strong style="color: #333;">Rising Sign:</strong> <span style="color: #8bc34a;">@(signs?.RisingSign ?? "Calculating...")</span></p>
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 15px;">
+                <button @onclick="NavigateBack" style="padding: 10px 20px; font-size: 1rem; border: none; border-radius: 5px; background-color: #3498db; color: white; cursor: pointer;">Back to Users</button>
+                <button @onclick="SendMessage" style="padding: 10px 20px; font-size: 1rem; border: none; border-radius: 5px; background-color: #27ae60; color: white; cursor: pointer;">Message @userProfile.Name</button>
+            </div>
+        </section>
+        <div style="margin-top: 20px; text-align: center; font-size: 0.9rem; color: #777;">
+                <p>ChatBot Coming Soon...</p>
+        </div>    
+    }
+</section>
+
+@code {
+    [Parameter]
+    public string Email { get; set; } = string.Empty;
+
+    private UserProfile? userProfile;
+    private BirthdayDetails? birthdayDetails;
+    private GetSignsResponse? signs;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Step 1: Fetch user profile from cache or API
+            userProfile = CacheService.GetFromCache<UserProfile>($"Profile_{Email}");
+            if (userProfile == null)
+            {
+                userProfile = await Http.GetFromJsonAsync<UserProfile>($"http://localhost:5042/getProfile/{Email}");
+                CacheService.SetCache($"Profile_{Email}", userProfile, TimeSpan.FromMinutes(5));
+            }
+
+            // Step 2: Fetch birth details from cache or API
+            birthdayDetails = CacheService.GetFromCache<BirthdayDetails>($"BirthDetails_{Email}");
+            if (birthdayDetails == null)
+            {
+                birthdayDetails = await Http.GetFromJsonAsync<BirthdayDetails>($"http://localhost:5042/getBirthday/{Email}");
+                CacheService.SetCache($"BirthDetails_{Email}", birthdayDetails, TimeSpan.FromMinutes(5));
+            }
+
+            // Step 3: Fetch astrology signs using /getSigns with caching
+            signs = CacheService.GetFromCache<GetSignsResponse>($"Signs_{Email}");
+            if (signs == null && birthdayDetails != null)
+            {
+                var response = await Http.PostAsJsonAsync("http://localhost:5042/getSigns", new GetSignsRequest
+                {
+                    Birthday = birthdayDetails.Birthday,
+                    BirthLocation = birthdayDetails.BirthLocation,
+                    BirthTime = birthdayDetails.BirthTime
+                });
+
+                if (response.IsSuccessStatusCode)
+                {
+                    signs = await response.Content.ReadFromJsonAsync<GetSignsResponse>();
+                    CacheService.SetCache($"Signs_{Email}", signs, TimeSpan.FromMinutes(10));
+                }
+                else
+                {
+                    Console.WriteLine($"Error fetching signs: {response.StatusCode}");
+                    signs = new GetSignsResponse();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching profile or signs: {ex.Message}");
+            userProfile = new UserProfile { Email = "", Name = "Unknown" };
+            signs = new GetSignsResponse();
+        }
+    }
+
+    private void SendMessage()
+    {
+        Console.WriteLine("Send Message");
+    }
+
+    private void NavigateBack()
+    {
+        Navigation.NavigateTo("/users");
+    }
+
+    public class UserProfile
+    {
+        public required string Email { get; set; }
+        public string Name { get; set; } = "Unknown";
+        public int Age { get; set; }
+        public string Pronouns { get; set; } = "Unknown";
+        public string Description { get; set; } = "No description provided.";
+    }
+
+    public class BirthdayDetails
+    {
+        public DateTime Birthday { get; set; }
+        public TimeSpan BirthTime { get; set; }
+        public string BirthLocation { get; set; } = "Unknown";
+    }
+
+    public class GetSignsRequest
+    {
+        public DateTime Birthday { get; set; }
+        public TimeSpan BirthTime { get; set; }
+        public string BirthLocation { get; set; } = "Unknown";
+    }
+
+    public class GetSignsResponse
+    {
+        public string SunSign { get; set; } = "Unknown";
+        public string MoonSign { get; set; } = "Unknown";
+        public string RisingSign { get; set; } = "Unknown";
+    }
+}
