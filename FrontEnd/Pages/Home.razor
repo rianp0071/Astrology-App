@@ -4,6 +4,7 @@
 @inject GeminiService GeminiService
 @using FrontEnd.Pages
 @inject Blazored.SessionStorage.ISessionStorageService SessionStorage
+@inject CacheService CacheService
 
 <h3>Home Page</h3>
 
@@ -30,6 +31,7 @@ else
     private const string BirthTimeKey = "UserBirthTime";
     private const string BirthLocationKey = "UserBirthLocation";
     private const string UserInputKey = "UserInput";
+    private const string UserBirthsCacheKey = "UserBirthsCacheKey";
 
     private void RedirectToLogin()
     {
@@ -44,6 +46,7 @@ else
             await SessionStorage.RemoveItemAsync(BirthTimeKey);
             await SessionStorage.RemoveItemAsync(BirthLocationKey);
             await SessionStorage.RemoveItemAsync(UserInputKey);
+            CacheService.ClearCache(UserBirthsCacheKey); // Clear any cached data
             TokenStorage.ClearToken();
             Navigation.NavigateTo("/login");
         }
