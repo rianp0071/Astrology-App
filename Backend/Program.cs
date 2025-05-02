@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using AstrologyApp.Models;
+using System.Security.Claims;
 
 
 // Implement cCACHING LATER ON FOR BETTER PERFORMANCE!!!!!!!!!!!!!
@@ -293,5 +294,61 @@ app.MapPost("/getSigns", async (AstrologyCalculator calculator, GetSignsRequest 
         });
     }
 });
+
+app.MapPost("/createProfile", async (UserManager<IdentityUser> userManager, ProfileRequest request) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Email))
+    {
+        return Results.BadRequest("Email cannot be null or empty.");
+    }
+
+    var user = await userManager.FindByEmailAsync(request.Email);
+    if (user == null)
+    {
+        return Results.NotFound("User not found.");
+    }
+
+    // Store profile data using user claims (no extra DB needed)
+    var claims = new List<Claim>
+    {
+        new Claim("Name", request.Name),
+        new Claim("Age", request.Age.ToString()),
+        new Claim("Pronouns", request.Pronouns),
+        new Claim("Description", request.Description)
+    };
+
+    try
+    {
+        await userManager.AddClaimsAsync(user, claims);
+        return Results.Ok("Profile saved successfully!");
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Error saving profile: {ex.Message}");
+    }
+});
+
+app.MapGet("/getProfile/{email}", async (UserManager<IdentityUser> userManager, string email) =>
+{
+    var user = await userManager.FindByEmailAsync(email);
+    if (user == null)
+    {
+        return Results.NotFound("User not found.");
+    }
+
+    var claims = await userManager.GetClaimsAsync(user);
+
+    var profile = new
+    {
+        Email = user.Email,
+        Name = claims.FirstOrDefault(c => c.Type == "Name")?.Value ?? "Not set",
+        Age = claims.FirstOrDefault(c => c.Type == "Age")?.Value ?? "Not set",
+        Pronouns = claims.FirstOrDefault(c => c.Type == "Pronouns")?.Value ?? "Not set",
+        Description = claims.FirstOrDefault(c => c.Type == "Description")?.Value ?? "Not set"
+    };
+
+    return Results.Ok(profile);
+});
+
 
 app.Run();
