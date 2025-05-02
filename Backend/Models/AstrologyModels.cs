@@ -59,4 +59,14 @@ namespace AstrologyApp.Models // Replace with your project's namespace
         [JsonPropertyName("lng")]
         public double Longitude { get; set; }
     }
+
+    public class ProfileRequest
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public int Age { get; set; }
+        public string Pronouns { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+    }
+
 }
