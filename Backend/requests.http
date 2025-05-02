@@ -40,21 +40,8 @@ POST http://localhost:5042/saveBirthday
 Content-Type: application/json
 
 {
-  "email": "testuser@example.com",
-  "birthday": "1990-10-20T00:00:00",
-  "birthTime": "16:30:00",
-  "birthLocation": "New York, USA"
-}
-
-###
-
-# Save Birthday
-POST http://localhost:5042/saveBirthday
-Content-Type: application/json
-
-{
   "email": "bayneP@example.com",
-  "birthday": "1990-12-20T00:00:00",
+  "birthday": "1990-01-20T00:00:00",
   "birthTime": "18:30:00",
   "birthLocation": "Los Angelos, USA"
 }
@@ -66,12 +53,24 @@ POST http://localhost:5042/saveBirthday
 Content-Type: application/json
 
 {
-  "email": "realbayne@example.com",
+  "email": "aaaaaaaaaaaaaaaaaaaaaaa@xaple.com",
   "birthday": "1990-05-07T00:00:00",
   "birthTime": "02:14:00",
   "birthLocation": "Joplin, USA"
 }
 
+###
+
+# Save Birthday
+POST http://localhost:5042/saveBirthday
+Content-Type: application/json
+
+{
+  "email": "testuser@example.com",
+  "birthday": "1990-06-20T00:00:00",
+  "birthTime": "16:30:00",
+  "birthLocation": "New York, USA"
+}
 
 ###
 
@@ -117,6 +116,21 @@ Content-Type: application/json
   "BirthTime": "12:30:00",
   "BirthLocation": "Frisco, USA"
 }
+
+### Create Profile
+POST http://localhost:5042/createProfile
+Content-Type: application/json
+
+{
+    "email": "hi@example.com",
+    "name": "John Doe",
+    "age": 25,
+    "pronouns": "He/Him",
+    "description": "I love astrology and exploring new perspectives!"
+}
+
+### Get Profile by Email
+GET http://localhost:5042/getProfile/hi@example.com
 
 ###
 
