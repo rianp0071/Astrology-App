@@ -1,0 +1,93 @@
+@page "/create-profile/{email}"
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@using AstrologyApp.Models
+
+<section class="profile-form">
+    <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 400px; margin: auto;">
+        <h3>Create Your Profile (@Email)</h3>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <label for="name" style="flex: 1;">Full Name:</label>
+            <input type="text" id="name" @bind="Name" style="flex: 2;" />
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <label for="age" style="flex: 1;">Age:</label>
+            <input type="number" id="age" @bind="Age" style="flex: 2;" min="0"/>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <label for="pronouns" style="flex: 1;">Pronouns:</label>
+            <select id="pronouns" @bind="Pronouns" style="flex: 2;">
+                <option value="He/Him">He/Him</option>
+                <option value="She/Her">She/Her</option>
+                <option value="They/Them">They/Them</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+
+        <div style="display: flex; flex-direction: column;">
+            <label for="description">Short Description:</label>
+            <textarea id="description" value="@Description" @oninput="UpdateCharacterCount" rows="2" style="width: 100%; height: 60px;" maxlength="300"></textarea>
+            <p>@CharactersRemaining characters remaining</p>
+        </div>
+
+        <div>
+            <button @onclick="SaveProfile">Save Profile</button>
+            <button @onclick="NavigateToLogin">Go to Login</button>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Message))
+        {
+            <p>@Message</p>
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter]
+    public string Email { get; set; } = string.Empty;
+
+    private string Name = string.Empty;
+    private int Age;
+    private string Pronouns = "They/Them";
+    private string Description = string.Empty;
+    private string Message = string.Empty;
+    private int CharactersRemaining = 300;
+
+    private async Task SaveProfile()
+    {
+        try
+        {
+            var response = await Http.PostAsJsonAsync("http://localhost:5042/createProfile", new { Email, Name, Age, Pronouns, Description });
+
+            if (response.IsSuccessStatusCode)
+            {
+                Message = "Profile created successfully!";
+                Navigation.NavigateTo("/login");
+            }
+            else
+            {
+                Message = "Failed to create profile. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Message = $"Error: {ex.Message}";
+        }
+    }
+
+
+    private void UpdateCharacterCount(ChangeEventArgs e)
+    {
+        Description = e.Value?.ToString() ?? string.Empty;
+        CharactersRemaining = 300 - Description.Length;
+    }
+
+
+    private void NavigateToLogin()
+    {
+        Navigation.NavigateTo("/login");
+    }
+}
