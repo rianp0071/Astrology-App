@@ -32,7 +32,7 @@ If the number of users grows, you can implement pagination or a search box to ma
     }
     else if (@currentUserBirth == null)
     {
-        <p>Go to Home to Save Your Birthday...</p>
+        <p>No Users Found Or Go to Home to Save Your Birthday...</p>
     }
     else if (!userBirths.Any())
     {
@@ -44,18 +44,22 @@ If the number of users grows, you can implement pagination or a search box to ma
         <table class="table">
             <thead>
                 <tr>
-                    <th>Email</th>
+                    <th>Name</th>
                     <th>Compatibility</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var user in userBirths)
-                {
-                    <tr>
-                        <td>@user.Email</td>
-                        <td style="color:@GetCompatibilityColor(user.CompatibilityScore)">@user.CompatibilityScore%</td>
-                    </tr>
-                }
+            @foreach (var user in userBirths)
+            {
+                <tr>
+                    <td>
+                        <a href="/getProfile/@user.Email">@user.Email</a> <!-- Link to profile using Email -->
+                    </td>
+                    <td style="color:@GetCompatibilityColor(user.CompatibilityScore)">
+                        @user.CompatibilityScore%
+                    </td>
+                </tr>
+            }
             </tbody>
         </table>
     }
@@ -83,27 +87,30 @@ If the number of users grows, you can implement pagination or a search box to ma
             var currentUserEmail = TokenStorage.GetUserEmail();
 
             // Fetch current user data from cache
-            currentUserBirth = CacheService.GetFromCache<UserBirth>("CurrentUserBirthCacheKey");
+            currentUserBirth = CacheService.GetFromCache<UserBirth>(CurrentUserBirthCacheKey);
 
             if (currentUserBirth == null)
             {
-                currentUserBirth = await Http.GetFromJsonAsync<UserBirth>(
-                    $"http://localhost:5042/getBirthday/{currentUserEmail}");
+                currentUserBirth = await Http.GetFromJsonAsync<UserBirth>($"http://localhost:5042/getBirthday/{currentUserEmail}");
 
                 if (currentUserBirth != null)
                 {
-                    CacheService.SetCache("CurrentUserBirthCacheKey", currentUserBirth, TimeSpan.FromMinutes(2));
+                    CacheService.SetCache(CurrentUserBirthCacheKey, currentUserBirth, TimeSpan.FromMinutes(2));
                 }
             }
 
-            userBirths = CacheService.GetFromCache<List<UserBirth>>("UserBirthsCacheKey");
+            // Fetch top 10 compatible users WITH names, caching them
+            userBirths = CacheService.GetFromCache<List<UserBirth>>(UserBirthsCacheKey);
 
             if (userBirths == null)
             {
                 userBirths = await Http.GetFromJsonAsync<List<UserBirth>>(
                     $"http://localhost:5042/getTop10CompatibilityWithOtherUsers/{currentUserEmail}");
 
-                CacheService.SetCache("UserBirthsCacheKey", userBirths, TimeSpan.FromSeconds(30));
+                if (userBirths != null)
+                {
+                    CacheService.SetCache(UserBirthsCacheKey, userBirths, TimeSpan.FromSeconds(30));
+                }
             }
         }
         catch (Exception ex)
@@ -133,6 +140,7 @@ If the number of users grows, you can implement pagination or a search box to ma
     public class UserBirth
     {
         public required string Email { get; set; }
+        public string Name { get; set; } = "Unknown Name"; // Default in case no name exists
         public DateTime Birthday { get; set; }
         public string location { get; set; } = string.Empty;
         public string SunSign { get; set; } = string.Empty;
@@ -140,4 +148,6 @@ If the number of users grows, you can implement pagination or a search box to ma
         public string RisingSign { get; set; } = string.Empty;
         public int CompatibilityScore { get; set; } = -1;
     }
+
+
 }
