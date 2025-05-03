@@ -217,7 +217,51 @@ app.MapGet("/getTop10CompatibilityWithOtherUsers/{email}", (BirthdayService birt
     return Results.Ok(response);
 });
 
+app.MapPost("/calculateCompatibilityWithSigns", (AstrologyCalculator calculator, CompatibilitySignsRequest request) =>
+{
+    try
+    {
+        // Validate input
+        if (request.Person1 == null || request.Person2 == null)
+        {
+            return Results.BadRequest("Both individuals' signs must be provided.");
+        }
 
+        // Use provided Sun, Moon, and Rising signs
+        var person1SunSign = request.Person1.SunSign;
+        var person1MoonSign = request.Person1.MoonSign;
+        var person1RisingSign = request.Person1.RisingSign;
+
+        var person2SunSign = request.Person2.SunSign;
+        var person2MoonSign = request.Person2.MoonSign;
+        var person2RisingSign = request.Person2.RisingSign;
+
+        // Calculate compatibility score
+        var compatibilityScore = calculator.CalculateCompatibilityScore(
+            person1SunSign, person1MoonSign, person1RisingSign,
+            person2SunSign, person2MoonSign, person2RisingSign
+        );
+
+        // Generate compatibility message
+        var compatibilityMessage = compatibilityScore switch
+        {
+            >= 80 => $"Soulmates! You scored {compatibilityScore}%. A perfect match full of harmony!",
+            >= 50 => $"Not bad! You scored {compatibilityScore}%. With a little effort, this could work!",
+            _ => $"Oh no! You scored {compatibilityScore}%. Opposites might attract, but this could be a challenge!"
+        };
+
+        // Return the result
+        return Results.Ok(compatibilityMessage);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"An error occurred: {ex.Message}");
+        return Results.Problem("An error occurred while calculating compatibility. Please try again later.");
+    }
+});
+
+
+// without already having signs
 app.MapPost("/calculateCompatibility", async (AstrologyCalculator calculator, CompatibilityRequest request) =>
 {
     try
