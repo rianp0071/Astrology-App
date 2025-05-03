@@ -33,7 +33,7 @@ public class GeminiService
                     {
                         Parts = new[]
                         {
-                            new Part { Text = $"{userInput} Limit response to 10 sentences max and don't tell me that you are limiting the response" }
+                            new Part { Text = $"{userInput} Limit response to 6 sentences max and don't tell me that you are limiting the response" }
                         }
                     }
                 }
