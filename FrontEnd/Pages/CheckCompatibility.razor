@@ -51,11 +51,11 @@
 
     <!-- Button -->
     <div style="margin-top:30px;">
-        <button @onclick="GenerateCompatibility" style="width:300px;" disabled="@isLoading">Calculate Compatibility</button>
+        <button @onclick="GenerateCompatibility" style="width:300px;" disabled="@isLoading1">Calculate Compatibility</button>
     </div>
 
     <!-- Spinner -->
-    <div style="display:@(isLoading ? "block" : "none"); margin: 20px; text-align: center;">
+    <div style="display:@(isLoading1 ? "block" : "none"); margin: 20px; text-align: center;">
         <div class="spinner">
             <div class="diamond"></div>
         </div>
@@ -66,7 +66,52 @@
     {
         <h4>Compatibility Results:</h4>
         <p class="fade-in">@compatibilityMessage</p>
+            
+        <button @onclick="ExplainCompatibility" style="width:300px;" disabled="@isLoading2">
+            Explain Result
+        </button>
+
+        @if (!string.IsNullOrWhiteSpace(explanationMessage))
+        {
+            <h4>Explanation:</h4>
+            <p class="fade-in">@explanationMessage</p>
+        }
     }
+
+        <!-- Spinner -->
+    <div style="display:@(isLoading2 ? "block" : "none"); margin: 20px; text-align: center;">
+        <div class="spinner">
+            <div class="diamond"></div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(explanationMessage) && !feedbackGiven)
+    {
+        <h5>Did you like the explanation?</h5>
+        <div style="display: flex; gap: 1rem; margin-top: 10px;">
+            <button @onclick="HandleThumbsUp" style="width:150px;">👍 Awesome</button>
+            <button @onclick="HandleThumbsDown" style="width:150px;">👎 This App Sucks</button>
+        </div>
+    }
+    else
+    {
+        @if (feedbackType == "Thumbs Up")
+        {
+            <p class="fade-in"><em>😊 Glad you're enjoying the app!</em></p>
+        }
+        else if (feedbackType == "Thumbs Down")
+        {
+            <p class="fade-in"><em>😡 Leave an angry message:</em></p>
+            <input @bind="angryMessage" type="text" placeholder="Vent your frustration..." style="width:300px;" />
+            <button @onclick="SubmitAngryMessage">Submit</button>
+        }
+        else if (feedbackType == "AngrySubmission")
+        {
+            <p class="fade-in"><em>😭😭😭 We Are Very Very Sorry About your Experience! Your feedback has been noted!</em></p>
+        }
+    }
+
+
 </section>
 
 @inject Blazored.SessionStorage.ISessionStorageService SessionStorage
@@ -78,7 +123,8 @@
         "San Francisco, USA", "Berlin, Germany", "Moscow, Russia", "Beijing, China", "Mumbai, India", "Rio de Janeiro", 
         "Brazil", "Cairo, Egypt", "Dubai, UAE", "Rome, Italy", "Bangkok, Thailand",
         "Paris, France", "Sydney, Australia", "Toronto, Canada", "Frisco, Texas", "Pune, India", "Hyderabad, India" };
-    private bool isLoading = false;
+    private bool isLoading1 = false;
+    private bool isLoading2 = false;
     private string compatibilityMessage = string.Empty;
 
     private const string Person1Key = "Person1";
@@ -213,59 +259,100 @@
         }
     }
 
+    private AstrologyPersonSigns person1Signs = new AstrologyPersonSigns() 
+    {
+        SunSign = string.Empty,
+        MoonSign = string.Empty,
+        RisingSign = string.Empty
+    };
+    private AstrologyPersonSigns person2Signs = new AstrologyPersonSigns
+    {
+        SunSign = string.Empty,
+        MoonSign = string.Empty,
+        RisingSign = string.Empty
+    };
+
     private async Task GenerateCompatibility()
     {
-        // Prevent duplicate calls by disabling the button
-        isLoading = true;
+        isLoading1 = true;
         compatibilityMessage = string.Empty;
+        explanationMessage = string.Empty;
 
         Console.WriteLine("[LOG] GenerateCompatibility called...");
+
+        // Reset feedback section
+        feedbackGiven = false;
+        feedbackType = string.Empty;
+        angryMessage = string.Empty;
 
         try
         {
             // Validate input
             if (string.IsNullOrWhiteSpace(person1.Name) || string.IsNullOrWhiteSpace(person2.Name) ||
-                person1.Birthday == default || person2.Birthday == default ||
-                string.IsNullOrWhiteSpace(person1.BirthLocation) || string.IsNullOrWhiteSpace(person2.BirthLocation))
+                person1.Birthday == default || person2.Birthday == default)
             {
                 compatibilityMessage = "Please provide valid details for both individuals.";
                 Console.WriteLine("[ERROR] Validation failed: Missing or invalid details.");
                 return;
             }
 
-            // Prepare request payload
+            // **Step 1: Fetch Signs for Person 1 and Store Directly**
+            var person1SignsResponse = await Http.PostAsJsonAsync("http://localhost:5042/getSigns", new
+            {
+                Birthday = person1.Birthday,
+                BirthTime = person1.BirthTime.ToString("HH:mm:ss"),
+                BirthLocation = person1.BirthLocation
+            });
+
+            person1Signs = await person1SignsResponse.Content.ReadFromJsonAsync<AstrologyPersonSigns>() ?? new AstrologyPersonSigns
+            {
+                SunSign = string.Empty,
+                MoonSign = string.Empty,
+                RisingSign = string.Empty
+            };
+            // **Step 2: Fetch Signs for Person 2 and Store Directly**
+            var person2SignsResponse = await Http.PostAsJsonAsync("http://localhost:5042/getSigns", new
+            {
+                Birthday = person2.Birthday,
+                BirthTime = person2.BirthTime.ToString("HH:mm:ss"),
+                BirthLocation = person2.BirthLocation
+            });
+
+            person2Signs = await person2SignsResponse.Content.ReadFromJsonAsync<AstrologyPersonSigns>() ?? new AstrologyPersonSigns
+            {
+                SunSign = string.Empty,
+                MoonSign = string.Empty,
+                RisingSign = string.Empty
+            };
+            // Check if signs were fetched properly
+            if (string.IsNullOrWhiteSpace(person1Signs.SunSign) || string.IsNullOrWhiteSpace(person2Signs.SunSign))
+            {
+                compatibilityMessage = "Failed to fetch astrology signs.";
+                Console.WriteLine("[ERROR] Sign retrieval failed.");
+                return;
+            }
+
+            Console.WriteLine($"[LOG] Stored signs for Person1: {person1Signs.SunSign}, {person1Signs.MoonSign}, {person1Signs.RisingSign}");
+            Console.WriteLine($"[LOG] Stored signs for Person2: {person2Signs.SunSign}, {person2Signs.MoonSign}, {person2Signs.RisingSign}");
+
+            // **Step 3: Calculate Compatibility Using Stored Signs**
             var compatibilityRequest = new
             {
-                Person1 = new
-                {
-                    person1.Name,
-                    person1.Birthday,
-                    BirthTime = person1.BirthTime.ToString("HH:mm:ss"),
-                    person1.BirthLocation
-                },
-                Person2 = new
-                {
-                    person2.Name,
-                    person2.Birthday,
-                    BirthTime = person2.BirthTime.ToString("HH:mm:ss"),
-                    person2.BirthLocation
-                }
+                Person1 = person1Signs,
+                Person2 = person2Signs
             };
 
-            Console.WriteLine($"[LOG] Sending compatibility request: {System.Text.Json.JsonSerializer.Serialize(compatibilityRequest)}");
+            var compatibilityResponse = await Http.PostAsJsonAsync("http://localhost:5042/calculateCompatibilityWithSigns", compatibilityRequest);
 
-            // Send request to API
-            var response = await Http.PostAsJsonAsync("http://localhost:5042/calculateCompatibility", compatibilityRequest);
-
-            if (response.IsSuccessStatusCode)
+            if (compatibilityResponse.IsSuccessStatusCode)
             {
-                compatibilityMessage = await response.Content.ReadAsStringAsync();
+                compatibilityMessage = await compatibilityResponse.Content.ReadAsStringAsync();
                 Console.WriteLine($"[LOG] Compatibility response: {compatibilityMessage}");
             }
             else
             {
                 compatibilityMessage = "Failed to calculate compatibility. Please try again.";
-                Console.WriteLine($"[ERROR] API call failed with status code: {response.StatusCode}");
+                Console.WriteLine($"[ERROR] API call failed with status code: {compatibilityResponse.StatusCode}");
             }
         }
         catch (Exception ex)
@@ -275,10 +362,131 @@
         }
         finally
         {
-            // Re-enable the button after function execution
-            isLoading = false;
+            isLoading1 = false;
         }
     }
+
+
+    private string explanationMessage = string.Empty;
+
+    private async Task ExplainCompatibility()
+    {
+        isLoading2 = true;
+        explanationMessage = string.Empty;
+        Console.WriteLine("[LOG] ExplainCompatibility called...");
+
+        try
+        {
+            // Validate input
+            if (string.IsNullOrWhiteSpace(compatibilityMessage))
+            {
+                Console.WriteLine("[ERROR] Compatibility message is missing.");
+                return;
+            }
+
+            // extract the score from the compatibility message
+            string scoreOnly = new string(compatibilityMessage.Where(char.IsDigit).ToArray());
+
+            Console.WriteLine(scoreOnly); 
+
+            // Prepare the request to Gemini AI
+            var geminiInput = $"Explain the compatibility result for:\nPerson 1 - Name: {Person1Name}, Sun: {person1Signs.SunSign}, Moon: {person1Signs.MoonSign}, Rising: {person1Signs.RisingSign}\n" +
+                            $"Person 2 - Name: {Person2Name}, Sun: {person2Signs.SunSign}, Moon: {person2Signs.MoonSign}, Rising: {person2Signs.RisingSign}\n" +
+                            $"Compatibility Score: {scoreOnly}.";
+
+            Console.WriteLine($"[LOG] Sending request to Gemini AI: {geminiInput}");
+
+            // Call the Gemini service
+            explanationMessage = await geminiService.AskGeminiAsync(geminiInput);
+
+            Console.WriteLine($"[LOG] Gemini Explanation response: {explanationMessage}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Exception during Gemini explanation: {ex.Message}");
+            explanationMessage = "An error occurred while fetching the explanation.";
+        }
+        finally
+        {
+            isLoading2 = false;
+        }
+    }
+
+    @inject GeminiService geminiService
+
+    private bool feedbackGiven = false;
+    private string feedbackType = string.Empty;
+    private string angryMessage = string.Empty;
+
+
+    private async Task HandleThumbsUp()
+    {
+        Console.WriteLine("[LOG] User gave a thumbs up for the explanation.");
+        feedbackGiven = true;
+        feedbackType = "Thumbs Up";
+        await SaveUserFeedbackAsync("Thumbs Up");
+    }
+
+    private async Task HandleThumbsDown()
+    {
+        Console.WriteLine("[LOG] User gave a thumbs down for the explanation.");
+        feedbackGiven = true;
+        feedbackType = "Thumbs Down";
+        await SaveUserFeedbackAsync("Thumbs Down");
+    }
+
+    private async Task SubmitAngryMessage()
+    {
+        Console.WriteLine($"[LOG] Angry feedback received: {angryMessage}");
+
+        var feedback = new
+        {
+            Person1 = person1.Name,
+            Person2 = person2.Name,
+            CompatibilityMessage = compatibilityMessage,
+            ExplanationMessage = explanationMessage,
+            Feedback = "Thumbs Down",
+            AngryMessage = angryMessage
+        };
+
+        await SaveUserFeedbackAsync(angryMessage);
+        feedbackType = "AngrySubmission";
+    }
+
+
+
+    private async Task SaveUserFeedbackAsync(string feedbackType)
+    {
+        try
+        {
+            var feedback = new
+            {
+                Person1 = person1.Name,
+                Person2 = person2.Name,
+                CompatibilityMessage = compatibilityMessage,
+                ExplanationMessage = explanationMessage,
+                Feedback = feedbackType
+            };
+
+            Console.WriteLine($"[LOG] Sending feedback: {System.Text.Json.JsonSerializer.Serialize(feedback)}");
+
+            // await Http.PostAsJsonAsync("http://localhost:5042/saveFeedback", feedback);
+            await Task.Delay(10); // Simulate a delay for saving feedback
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Failed to save feedback: {ex.Message}");
+        }
+    }
+
+
+    public class AstrologyPersonSigns
+    {
+        public required string SunSign { get; set; } = string.Empty;
+        public required string MoonSign { get; set; } = string.Empty;
+        public required string RisingSign { get; set; } = string.Empty;
+    }
+
 
     public class PersonDetails
     {
