@@ -25,6 +25,10 @@ else
 <!-- Add AI Component Here -->
 <TestGemini />
 
+<div>
+    <ChatBot/>
+</div>
+
 @code {
     private bool IsAuthenticated => !string.IsNullOrEmpty(TokenStorage.GetToken());
     private const string BirthdayKey = "UserBirthday";
