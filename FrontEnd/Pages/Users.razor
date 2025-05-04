@@ -91,11 +91,22 @@ If the number of users grows, you can implement pagination or a search box to ma
 
             if (currentUserBirth == null)
             {
-                currentUserBirth = await Http.GetFromJsonAsync<UserBirth>($"http://localhost:5042/getBirthday/{currentUserEmail}");
+                var response = await Http.GetAsync($"http://localhost:5042/getBirthday/{currentUserEmail}");
 
-                if (currentUserBirth != null)
+                if (response.IsSuccessStatusCode)
                 {
-                    CacheService.SetCache(CurrentUserBirthCacheKey, currentUserBirth, TimeSpan.FromMinutes(2));
+                    currentUserBirth = await response.Content.ReadFromJsonAsync<UserBirth>();
+                    
+                    if (currentUserBirth != null)
+                    {
+                        CacheService.SetCache(CurrentUserBirthCacheKey, currentUserBirth, TimeSpan.FromMinutes(2));
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"Error retrieving user birthday. Status code: {response.StatusCode}");
+                    currentUserBirth = null;
+                    return; // Avoid proceeding if the user has no birthday saved
                 }
             }
 
@@ -104,12 +115,21 @@ If the number of users grows, you can implement pagination or a search box to ma
 
             if (userBirths == null)
             {
-                userBirths = await Http.GetFromJsonAsync<List<UserBirth>>(
-                    $"http://localhost:5042/getTop10CompatibilityWithOtherUsers/{currentUserEmail}");
+                var usersResponse = await Http.GetAsync($"http://localhost:5042/getTop10CompatibilityWithOtherUsers/{currentUserEmail}");
 
-                if (userBirths != null)
+                if (usersResponse.IsSuccessStatusCode)
                 {
-                    CacheService.SetCache(UserBirthsCacheKey, userBirths, TimeSpan.FromSeconds(30));
+                    userBirths = await usersResponse.Content.ReadFromJsonAsync<List<UserBirth>>();
+
+                    if (userBirths != null)
+                    {
+                        CacheService.SetCache(UserBirthsCacheKey, userBirths, TimeSpan.FromSeconds(30));
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"Error retrieving compatible users. Status code: {usersResponse.StatusCode}");
+                    userBirths = new List<UserBirth>();
                 }
             }
         }
@@ -120,6 +140,7 @@ If the number of users grows, you can implement pagination or a search box to ma
             userBirths = new List<UserBirth>();
         }
     }
+
 
 
     private void NavigateToLogin()
