@@ -2,6 +2,7 @@
 @inject HttpClient Http
 @inject TokenStorageService TokenStorage
 @inject NavigationManager Navigation
+@inject CacheService CacheService
 
 <section style="display: flex; flex-direction: column; gap: 1rem; max-width: 1000px; margin: auto;">
     <h3>Find Friends</h3>
@@ -51,6 +52,7 @@
     private List<UserBirth>? users;
     private List<UserBirth>? filteredUsers = new List<UserBirth>(); 
     private string searchQuery = "";
+    private const string UsersCacheKey = "FindFriendsUsersCacheKey"; // Cache key
 
     protected override async Task OnInitializedAsync()
     {
@@ -61,7 +63,20 @@
 
         try
         {
-            users = await Http.GetFromJsonAsync<List<UserBirth>>("http://localhost:5042/getAllUsersWithBirthdays");
+            // Try retrieving users from cache
+            users = CacheService.GetFromCache<List<UserBirth>>(UsersCacheKey);
+
+            if (users == null)
+            {
+                Console.WriteLine("Cache miss, fetching users from API...");
+                users = await Http.GetFromJsonAsync<List<UserBirth>>("http://localhost:5042/getAllUsersWithBirthdays");
+
+                if (users != null)
+                {
+                    CacheService.SetCache(UsersCacheKey, users, TimeSpan.FromMinutes(5)); // Cache users for 5 mins
+                }
+            }
+
             filteredUsers = new List<UserBirth>(); // Initially empty
         }
         catch (Exception ex)
