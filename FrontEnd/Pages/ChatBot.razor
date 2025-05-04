@@ -1,0 +1,66 @@
+@page "/chatbot"
+@using Newtonsoft.Json
+@using System.Text
+@inject GeminiService GeminiService
+
+<PageTitle>Chatbot</PageTitle>
+
+<head>
+    <link rel="stylesheet" href="css/chatbot.css" />
+</head>
+<div class="chatbot-container">
+    <div class="row">
+        <div class="col-4">
+            <div class="messages">
+                @for (int i = 0; i < messages.Count; i++)
+                {
+                    @if (i % 2 == 0)
+                    {
+                        <div class="question">@messages[i]</div>
+                    } else
+                    {
+                        <div class="response">@messages[i]</div>
+                    }
+                }
+                
+            </div>
+            <div class="textMessage">
+                <input @bind="message" />
+                <button @onclick="SendMessage">Send</button>
+                <!-- 3 messages dots -->
+                @if (isLoading)
+                {
+                    <div class="typing-indicator">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="col-4">
+        </div>
+    </div>
+</div>
+
+@code{
+    public required string message;
+    private bool isLoading = false;
+    public List<string> messages = new List<string>();
+    private static HttpClient Http = new HttpClient();
+
+    public async Task SendMessage()
+    {
+        isLoading = true;  // Start loading
+        StateHasChanged(); // Force UI refresh
+
+        Http = new HttpClient();
+        messages.Add(message);
+
+        var responseText = await GeminiService.AskGeminiAsync(message);
+        messages.Add(responseText);
+        
+        isLoading = false;
+        StateHasChanged();
+    }
+}
