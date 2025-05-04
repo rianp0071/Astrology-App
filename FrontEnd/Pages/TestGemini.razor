@@ -48,13 +48,6 @@
 
 <br/>
 
-<div>
-    <!-- Text input (appears below) -->
-    <h5>Personal ChatBot--Let's Chat! Express Your Inquisitions</h5>
-    <input @bind="userInput" type="text" placeholder="Write something..." style="width:300px;" />
-    <button @onclick="AskGemini" disabled=@isLoading2>Ask</button>
-</div>
-
 <!-- Spinner -->
 <div style="display:@(isLoading2 ? "block" : "none"); margin: 20px; text-align: center;">
     <div class="spinner">
