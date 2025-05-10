@@ -9,16 +9,13 @@ using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Define the custom ApplicationDbContext for Identity
-builder.Services.AddDbContext<IdentityDbContext>(options =>
-    options.UseInMemoryDatabase("AppDb")); // Use an in-memory database for simplicity
+// Define and register IdentityDbContext properly
+builder.Services.AddDbContext<AppIdentityDbContext>(options =>
+    options.UseInMemoryDatabase("IdentityAppDb")); // You can replace with SQLite or SQL Server
 
-// Add Authorization services
-builder.Services.AddAuthorization();
-
-// Add Identity services
+// Register Identity Services using AppIdentityDbContext
 builder.Services.AddIdentityApiEndpoints<IdentityUser>()
-    .AddEntityFrameworkStores<IdentityDbContext>();
+    .AddEntityFrameworkStores<AppIdentityDbContext>();
 
 builder.Services.AddCors(options =>
 {
@@ -34,9 +31,21 @@ builder.Services.AddSingleton<BirthdayService>();
 builder.Services.AddMemoryCache(); // Registers IMemoryCache
 builder.Services.AddScoped<AstrologyCalculator>(); // Registers AstrologyCalculator as a scoped service
 
+// Add Authorization services
+builder.Services.AddAuthorization();
+
+// Register SignalR
+builder.Services.AddSignalR();
+
+// Register Chat Messages Database (AppDbContext)
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseInMemoryDatabase("ChatApp"));
+
 var app = builder.Build();
 
-app.UseCors(); 
+app.UseCors();
+app.MapHub<ChatHub>("/chatHub"); // SignalR Endpoint
+app.UseRouting();
 
 // Automatically map Identity API endpoints (register, login, etc.)
 app.MapIdentityApi<IdentityUser>();
@@ -372,6 +381,8 @@ app.MapPost("/createProfile", async (UserManager<IdentityUser> userManager, Prof
     }
 });
 
+
+// using indexing for better performance in real db
 app.MapGet("/getProfile/{email}", async (UserManager<IdentityUser> userManager, string email) =>
 {
     var user = await userManager.FindByEmailAsync(email);
@@ -393,6 +404,17 @@ app.MapGet("/getProfile/{email}", async (UserManager<IdentityUser> userManager, 
 
     return Results.Ok(profile);
 });
+
+app.MapGet("/getMessages/{sender}/{receiver}", async (AppDbContext db, string sender, string receiver) =>
+{
+    var messages = await db.Messages
+        .Where(m => (m.Sender == sender && m.Receiver == receiver) || (m.Sender == receiver && m.Receiver == sender)) // Fetch conversation between two users
+        .OrderBy(m => m.Timestamp)
+        .ToListAsync();
+
+    return Results.Ok(messages); // ✅ Always return an empty list instead of NotFound
+});
+
 
 
 app.Run();
