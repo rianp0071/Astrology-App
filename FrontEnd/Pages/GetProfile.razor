@@ -108,6 +108,7 @@
     private void SendMessage()
     {
         Console.WriteLine("Send Message");
+        Navigation.NavigateTo($"/chat/{userProfile?.Email}");
     }
 
     private void NavigateBack()
