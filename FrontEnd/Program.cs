@@ -4,10 +4,11 @@ using FrontEnd;
 using System.Net.Http.Json;
 using Blazored.SessionStorage;
 
-
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
+
+
 
 // Load appsettings.json
 using var client = new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) };
@@ -28,6 +29,7 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 builder.Services.AddScoped<TokenStorageService>();
 builder.Services.AddScoped<GeminiService>();
 builder.Services.AddScoped<CacheService>();
+builder.Services.AddScoped<ChatService>(); // Register chat service for real-time messaging
 builder.Services.AddMemoryCache(); // Ensure IMemoryCache is registered
 builder.Services.AddBlazoredSessionStorage();
 
