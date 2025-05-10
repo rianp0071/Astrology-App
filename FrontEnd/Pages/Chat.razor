@@ -1,0 +1,117 @@
+@page "/chat/{email}"
+@inject ChatService ChatService
+@inject TokenStorageService TokenStorageService
+@using AstrologyApp.Models
+@inject CacheService CacheService
+@inject IJSRuntime JSRuntime
+
+<h2>Chat with @Email</h2>
+
+<div id="chatContainer" style="overflow-y: auto; max-height: 400px; scroll-behavior: smooth; overflow-anchor: auto;">
+    <ul style="list-style-type: none; padding: 0;">
+        @foreach (var msg in messages)
+        {
+            <li style="display: flex; margin-bottom: 8px; justify-content: @(msg.Sender == senderEmail ? "flex-end" : "flex-start");">
+                <div style="max-width: 60%; padding: 10px; border-radius: 15px;
+                            background-color: @(msg.Sender == senderEmail ? "#007aff" : "#e5e5ea");
+                            color: @(msg.Sender == senderEmail ? "white" : "black");">
+                    <strong>@msg.Sender</strong><br>
+                    @msg.Message
+                    <span style="font-size: 12px; opacity: 0.6;">(@msg.Timestamp.ToLocalTime())</span>
+                </div>
+            </li>
+        }
+    </ul>
+</div>
+
+
+<div style="display: flex; align-items: center; padding: 10px; border-top: 1px solid #ccc;">
+    <input @bind="message" placeholder="Type a message..." 
+        style="flex-grow: 1; padding: 10px; border-radius: 20px; border: 1px solid #ccc;" />
+
+    <button @onclick="SendMessage" style="margin-left: 10px; padding: 8px 12px; 
+                   border-radius: 50%; background-color: #007aff; color: white;">
+        ➤
+    </button>
+</div>
+
+
+
+@code {
+    [Parameter]
+    public string Email { get; set; } = string.Empty;
+
+    private const string ChatMessagesCacheKey = "ChatMessages_";
+
+    private List<ChatMessage> messages = new();
+    private string message = "";
+    private string? senderEmail;
+
+    protected override async Task OnInitializedAsync()
+    {
+        senderEmail = TokenStorageService.GetUserEmail(); // Get logged-in user’s email
+
+        if (!ChatService.IsConnected)
+        {
+            await ChatService.ConnectAsync();
+        }
+
+        ChatService.OnMessageReceived -= HandleMessageReceived;
+        ChatService.OnMessageReceived += HandleMessageReceived;
+
+        // **Check cache before making API call**
+        messages = CacheService.GetFromCache<List<ChatMessage>>(ChatMessagesCacheKey + Email) ?? new List<ChatMessage>();
+
+        if (messages == null || !messages.Any()) // 🚨 Ensure fresh messages are fetched if cache is empty
+        {
+            var savedMessages = senderEmail != null 
+                ? await ChatService.GetMessages(senderEmail, Email) 
+                : new List<ChatMessage>();
+
+            messages = savedMessages;
+                
+            // Cache messages for faster access next time
+            CacheService.SetCache(ChatMessagesCacheKey + Email, messages, TimeSpan.FromMinutes(1));
+        }
+
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Task.Delay(100); // Ensures messages render first
+            await JSRuntime.InvokeVoidAsync("scrollToBottom");
+        }
+    }
+
+
+    private void HandleMessageReceived(ChatMessage chatMessage)
+    {
+        messages.Add(chatMessage);
+        StateHasChanged();
+        JSRuntime.InvokeVoidAsync("scrollToBottom");
+    }
+
+    private async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(senderEmail) || string.IsNullOrWhiteSpace(message)) return;
+
+        var chatMessage = new ChatMessage
+        {
+            Sender = senderEmail,
+            Receiver = Email,
+            Message = message,
+            Timestamp = DateTime.UtcNow
+        };
+
+        await ChatService.SendMessage(chatMessage);
+
+        // 🚨 Clear chat cache so new messages show up when user leaves and returns
+        CacheService.ClearCache(ChatMessagesCacheKey + Email);
+
+        message = "";
+        await JSRuntime.InvokeVoidAsync("scrollToBottom");
+    }
+
+}
