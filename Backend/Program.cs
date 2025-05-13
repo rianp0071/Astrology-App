@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using AstrologyApp.Models;
 using System.Security.Claims;
@@ -407,14 +406,27 @@ app.MapGet("/getProfile/{email}", async (UserManager<IdentityUser> userManager, 
 
 app.MapGet("/getMessages/{sender}/{receiver}", async (AppDbContext db, string sender, string receiver) =>
 {
-    var messages = await db.Messages
-        .Where(m => (m.Sender == sender && m.Receiver == receiver) || (m.Sender == receiver && m.Receiver == sender)) // Fetch conversation between two users
-        .OrderBy(m => m.Timestamp)
-        .ToListAsync();
+    List<ChatMessage> messages;
 
-    return Results.Ok(messages); // ✅ Always return an empty list instead of NotFound
+    if (receiver == "Public")
+    {
+        // 🚀 Fetch ALL public discussion messages
+        messages = await db.Messages
+            .Where(m => m.Receiver == "Public")
+            .OrderBy(m => m.Timestamp)
+            .ToListAsync();
+    }
+    else
+    {
+        // 🔹 Fetch private conversation between two users
+        messages = await db.Messages
+            .Where(m => (m.Sender == sender && m.Receiver == receiver) || (m.Sender == receiver && m.Receiver == sender))
+            .OrderBy(m => m.Timestamp)
+            .ToListAsync();
+    }
+
+    return Results.Ok(messages);
 });
-
 
 
 app.Run();
