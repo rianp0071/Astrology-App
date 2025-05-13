@@ -19,8 +19,17 @@ public class ChatHub : Hub
         _context.Messages.Add(chatMessage);
         await _context.SaveChangesAsync();
 
-        // Broadcast message to connected clients
-        await Clients.All.SendAsync("ReceiveMessage", chatMessage);
+        if (chatMessage.Receiver == "Public")
+        {
+            // 🚀 Broadcast public messages to ALL users
+            await Clients.All.SendAsync("ReceiveMessage", chatMessage);
+        }
+        else
+        {
+            // 🔹 Send private messages ONLY to sender & receiver
+            await Clients.User(chatMessage.Receiver).SendAsync("ReceiveMessage", chatMessage);
+            await Clients.User(chatMessage.Sender).SendAsync("ReceiveMessage", chatMessage);
+        }
     }
 
     public async Task<List<ChatMessage>> GetMessages(string sender, string receiver)
