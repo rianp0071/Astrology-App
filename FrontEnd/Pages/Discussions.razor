@@ -1,0 +1,123 @@
+@page "/discussions"
+@inject ChatService ChatService
+@inject TokenStorageService TokenStorageService
+@using AstrologyApp.Models
+@inject CacheService CacheService
+@inject IJSRuntime JSRuntime
+
+<h2>Public Discussions</h2>
+
+<div id="chatContainer" style="overflow-y: auto; max-height: 500px; scroll-behavior: smooth;">
+    <ul style="list-style-type: none; padding: 0;">
+        @foreach (var msg in messages)
+        {
+            <li style="display: flex; margin-bottom: 8px; justify-content: @(msg.Sender == senderEmail ? "flex-end" : "flex-start");">
+                <div style="max-width: 60%; padding: 10px; border-radius: 15px;
+                            background-color: @(msg.Sender == senderEmail ? "#007aff" : "#e5e5ea");
+                            color: @(msg.Sender == senderEmail ? "white" : "black");">
+                    <strong>@msg.Sender</strong><br>
+                    @msg.Message
+                    <span style="font-size: 12px; opacity: 0.6;">(@msg.Timestamp.ToLocalTime())</span>
+                </div>
+            </li>
+        }
+    </ul>
+</div>
+
+<div style="display: flex; align-items: center; padding: 10px; border-top: 1px solid #ccc;">
+    <input @bind="message" placeholder="Type a message..." 
+        style="flex-grow: 1; padding: 10px; border-radius: 20px; border: 1px solid #ccc;" />
+
+    <button @onclick="SendDiscussionMessage" style="margin-left: 10px; padding: 8px 12px; 
+                   border-radius: 50%; background-color: #007aff; color: white;">
+        ➤
+    </button>
+</div>
+
+@code {
+    private const string DiscussionMessagesCacheKey = "DiscussionMessagesCache"; // ✅ Cache key for public chat
+    private List<ChatMessage> messages = new();
+    private string message = "";
+    private string? senderEmail;
+
+    protected override async Task OnInitializedAsync()
+    {
+        senderEmail = TokenStorageService.GetUserEmail(); // Get logged-in user’s email
+
+        if (!ChatService.IsConnected)
+        {
+            await ChatService.ConnectAsync();
+        }
+
+    // ✅ Remove previous event subscriptions to prevent duplication
+    ChatService.OnMessageReceived -= HandleMessageReceived;
+    
+    ChatService.OnMessageReceived += HandleMessageReceived;
+
+
+        // ✅ Retrieve cached messages first to optimize loading speed
+        messages = CacheService.GetFromCache<List<ChatMessage>>(DiscussionMessagesCacheKey) ?? new List<ChatMessage>();
+
+        if (!messages.Any()) // 🚨 Ensure fresh messages are fetched if cache is empty
+        {
+            var savedMessages = await ChatService.GetMessages("Public", "Public");
+            messages = savedMessages;
+
+            // ✅ Cache messages for better performance
+            CacheService.SetCache(DiscussionMessagesCacheKey, messages, TimeSpan.FromMinutes(5));
+        }
+    }
+
+    private void HandleMessageReceived(ChatMessage chatMessage)
+    {
+        messages.Add(chatMessage);
+        StateHasChanged();
+        CacheService.SetCache(DiscussionMessagesCacheKey, messages, TimeSpan.FromMinutes(5)); // ✅ Keep cache updated
+        JSRuntime.InvokeVoidAsync("scrollToBottom");
+    }
+
+    // ✅ Ensure clean SignalR disposal when leaving the page
+
+    @implements IAsyncDisposable
+    public async ValueTask DisposeAsync()
+    {
+        Console.WriteLine("Disposing Chat Component...");
+
+        ChatService.OnMessageReceived -= HandleMessageReceived;
+
+        if (ChatService.IsConnected)
+        {
+            await ChatService.Disconnect(); // 🚀 Properly awaits SignalR disconnect
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Task.Delay(100); // Ensures messages render first
+            await JSRuntime.InvokeVoidAsync("scrollToBottom");
+        }
+    }
+
+    private async Task SendDiscussionMessage()
+    {
+        if (string.IsNullOrWhiteSpace(senderEmail) || string.IsNullOrWhiteSpace(message)) return;
+
+        var chatMessage = new ChatMessage
+        {
+            Sender = senderEmail,
+            Receiver = "Public",
+            Message = message,
+            Timestamp = DateTime.UtcNow
+        };
+
+        await ChatService.SendMessage(chatMessage);
+
+        // ✅ Clear cache after sending new messages to force fresh data retrieval
+        CacheService.ClearCache(DiscussionMessagesCacheKey);
+
+        message = "";
+        await JSRuntime.InvokeVoidAsync("scrollToBottom");
+    }
+}
