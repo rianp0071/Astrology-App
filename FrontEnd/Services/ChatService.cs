@@ -22,21 +22,20 @@ public class ChatService
         {
             _hubConnection = new HubConnectionBuilder()
                 .WithUrl("http://localhost:5042/chatHub")
+                .WithAutomaticReconnect() // 🚀 Ensures auto-reconnect
                 .Build();
         }
 
-        if (!_isEventSubscribed) 
+        await _hubConnection.StartAsync(); // ✅ Ensure connection is active first
+        Console.WriteLine("SignalR Connected!");
+
+        _hubConnection.On<ChatMessage>("ReceiveMessage", chatMessage =>
         {
-            _hubConnection.On<ChatMessage>("ReceiveMessage", chatMessage =>
-            {
-                Console.WriteLine($"SignalR Received: {chatMessage.Message}");
-                OnMessageReceived?.Invoke(chatMessage);
-            });
+            Console.WriteLine($"SignalR Received: {chatMessage.Message}");
+            OnMessageReceived?.Invoke(chatMessage);
+        });
 
-            _isEventSubscribed = true;
-        }
-
-        await _hubConnection.StartAsync();
+        _isEventSubscribed = true; // ✅ Flag event subscription
     }
 
 
