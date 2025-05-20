@@ -54,13 +54,16 @@
         if (!ChatService.IsConnected)
         {
             await ChatService.ConnectAsync();
+            Console.WriteLine("Connected to SignalR");
         }
 
+        Console.WriteLine(ChatService.IsConnected);
         ChatService.OnMessageReceived -= HandleMessageReceived;
         ChatService.OnMessageReceived += HandleMessageReceived;
+        Console.WriteLine("Event Subscription Active ✅"); // ✅ Debug confirmation
 
         // **Check cache before making API call**
-        messages = CacheService.GetFromCache<List<ChatMessage>>(ChatMessagesCacheKey + Email) ?? new List<ChatMessage>();
+        messages = CacheService.GetFromCache<List<ChatMessage>>(ChatMessagesCacheKey + Email + senderEmail) ?? new List<ChatMessage>();
 
         if (messages == null || !messages.Any()) // 🚨 Ensure fresh messages are fetched if cache is empty
         {
@@ -71,7 +74,7 @@
             messages = savedMessages;
                 
             // Cache messages for faster access next time
-            CacheService.SetCache(ChatMessagesCacheKey + Email, messages, TimeSpan.FromMinutes(1));
+            CacheService.SetCache(ChatMessagesCacheKey + Email + senderEmail, messages, TimeSpan.FromMinutes(1));
         }
 
     }
@@ -85,12 +88,27 @@
         }
     }
 
+    @implements IAsyncDisposable
+    public async ValueTask DisposeAsync()
+    {
+        Console.WriteLine("Disposing Chat Component...");
+
+        ChatService.OnMessageReceived -= HandleMessageReceived;
+
+        if (ChatService.IsConnected)
+        {
+            await ChatService.Disconnect(); // 🚀 Properly awaits SignalR disconnect
+        }
+    }
 
     private void HandleMessageReceived(ChatMessage chatMessage)
     {
+        Console.WriteLine($"Handling SignalR Message ✅: {chatMessage.Message}"); // ✅ Debug confirmation
         messages.Add(chatMessage);
-        StateHasChanged();
+        CacheService.SetCache(ChatMessagesCacheKey + Email + senderEmail, messages, TimeSpan.FromMinutes(5)); // ✅ Keep cache updated
+        InvokeAsync(StateHasChanged);
         JSRuntime.InvokeVoidAsync("scrollToBottom");
+        Console.WriteLine($"Message added to UI: {chatMessage.Message}");
     }
 
     private async Task SendMessage()
@@ -108,7 +126,7 @@
         await ChatService.SendMessage(chatMessage);
 
         // 🚨 Clear chat cache so new messages show up when user leaves and returns
-        CacheService.ClearCache(ChatMessagesCacheKey + Email);
+        CacheService.ClearCache(ChatMessagesCacheKey + Email + senderEmail);
 
         message = "";
         await JSRuntime.InvokeVoidAsync("scrollToBottom");
