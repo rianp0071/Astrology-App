@@ -2,52 +2,80 @@
 @using Newtonsoft.Json
 @using System.Text
 @inject GeminiService GeminiService
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Chatbot</PageTitle>
 
 <head>
     <link rel="stylesheet" href="css/chatbot.css" />
 </head>
-<div class="chatbot-container">
-    <div class="row">
-        <div class="col-4">
-            <div class="messages">
-                @for (int i = 0; i < messages.Count; i++)
-                {
-                    @if (i % 2 == 0)
+
+<button @onclick="ToggleChatbot" class="chatbot-toggle">
+    <span class="chat-icon">💬</span>
+</button>
+
+@if (isChatbotOpen)
+{
+    <div id="chatbot-container" class="chatbot-container">
+        <div class="row">
+            <div class="col-4">
+                <div class="messages">
+                    @for (int i = 0; i < messages.Count; i++)
                     {
-                        <div class="question">@messages[i]</div>
-                    } else
-                    {
-                        <div class="response">@messages[i]</div>
+                        @if (i % 2 == 0)
+                        {
+                            <div class="response">@messages[i]</div>
+                        } 
+                        else
+                        {
+                            <div class="question">@messages[i]</div>
+                        }
                     }
-                }
-                
+                </div>
+                <div class="textMessage">
+                    <input @bind="message" />
+                    <button @onclick="SendMessage">Send</button>
+                    @if (isLoading)
+                    {
+                        <div class="typing-indicator">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    }
+                </div>
             </div>
-            <div class="textMessage">
-                <input @bind="message" />
-                <button @onclick="SendMessage">Send</button>
-                <!-- 3 messages dots -->
-                @if (isLoading)
-                {
-                    <div class="typing-indicator">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </div>
-                }
-            </div>
-        </div>
-        <div class="col-4">
         </div>
     </div>
-</div>
+}
+
 
 @code{
+    private bool isChatbotOpen = false; 
+    private bool isInitialized = false;
     public required string message;
     private bool isLoading = false;
     public List<string> messages = new List<string>();
     private static HttpClient Http = new HttpClient();
+
+    public async Task ToggleChatbot()
+    {
+        isChatbotOpen = !isChatbotOpen;
+
+        // ✅ Run initialization logic only when chatbot is opened for the first time
+        if (isChatbotOpen && !isInitialized)
+        {
+            isLoading = true;
+            StateHasChanged(); // Refresh UI
+
+            await Task.Delay(1000); // Simulate loading delay
+            messages.Add("Hello! My name is Saturn and I will be your personal assistant! How can I assist you today?");
+            
+            isLoading = false;
+            isInitialized = true; // ✅ Mark initialization as complete
+            StateHasChanged();
+        }
+    }
 
     public async Task SendMessage()
     {
@@ -62,5 +90,8 @@
         
         isLoading = false;
         StateHasChanged();
+
+        await Task.Delay(100); // Simulate a delay for loading
+        await JSRuntime.InvokeVoidAsync("scrollBotToBottom");
     }
 }
