@@ -19,6 +19,8 @@ public class ChatHub : Hub
         _context.Messages.Add(chatMessage);
         await _context.SaveChangesAsync();
 
+        // Console.WriteLine($"SignalR Hub: Sending message '{chatMessage.Message}' from {chatMessage.Sender} to {chatMessage.Receiver}");
+
         if (chatMessage.Receiver == "Public")
         {
             // 🚀 Broadcast public messages to ALL users
@@ -27,9 +29,12 @@ public class ChatHub : Hub
         else
         {
             // 🔹 Send private messages ONLY to sender & receiver
+            Console.WriteLine("SignalR Hub: Sending Private Message...");
             await Clients.User(chatMessage.Receiver).SendAsync("ReceiveMessage", chatMessage);
             await Clients.User(chatMessage.Sender).SendAsync("ReceiveMessage", chatMessage);
         }
+
+        Console.WriteLine($"SignalR Hub: Message '{chatMessage.Message}' sent from {chatMessage.Sender} to {chatMessage.Receiver}");
     }
 
     public async Task<List<ChatMessage>> GetMessages(string sender, string receiver)
