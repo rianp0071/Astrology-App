@@ -143,3 +143,45 @@ a, .btn-link {
     40% { transform: scale(1); opacity: 1; }
 }
 
+@media screen and (max-width: 768px) {
+    .chatbot-container {
+        width: 300%;
+        height: 100%;
+        padding: 10px;
+    }
+    
+    .chatbot-container .messages {
+        width: 95%; /* Increase width for better usability */
+        height: 400px;
+        padding: 15px;
+    }
+
+    .response, .question {
+        width: 95%; /* Expand messages to fit the screen */
+        font-size: 14px; /* Maintain readability */
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .chatbot-container {
+        width: 300%;
+        height: 100%;
+        padding: 10px;
+    }
+    
+    .chatbot-container .messages {
+        width: 100%; /* Make full width for smaller screens */
+        height: 350px;
+        padding: 10px;
+    }
+
+    .response, .question {
+        width: 100%;
+        font-size: 13px; /* Keep it legible */
+    }
+
+    .textMessage input, .textMessage button {
+        padding: 12px;
+    }
+}
+
