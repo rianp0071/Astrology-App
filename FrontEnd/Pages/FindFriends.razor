@@ -63,8 +63,10 @@
 
         try
         {
+            var currentUserEmail = TokenStorage.GetUserEmail();
+            Console.WriteLine($"Current user email: {currentUserEmail}");
             // Try retrieving users from cache
-            users = CacheService.GetFromCache<List<UserBirth>>(UsersCacheKey);
+            users = CacheService.GetFromCache<List<UserBirth>>(UsersCacheKey + currentUserEmail);
 
             if (users == null)
             {
@@ -73,7 +75,8 @@
 
                 if (users != null)
                 {
-                    CacheService.SetCache(UsersCacheKey, users, TimeSpan.FromMinutes(5)); // Cache users for 5 mins
+                    users = users.Where(u => u.Email != currentUserEmail).ToList(); // Exclude current user
+                    CacheService.SetCache(UsersCacheKey + currentUserEmail, users, TimeSpan.FromMinutes(5)); // Cache users for 5 mins
                 }
             }
 
